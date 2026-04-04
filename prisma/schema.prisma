@@ -122,6 +122,7 @@ model School {
   teachers       Teacher[]
   parents        Parent[]
   classes        Class[]
+  classStudents  ClassStudent[]
   subjects       Subject[]
   academicTerms  AcademicTerm[]
   assignments    Assignment[]
@@ -204,15 +205,14 @@ model Student {
   userId         String    @unique
   schoolId       String    @map("school_id")
   studentNumber  String    @map("student_number")
-  classId        String?   @map("class_id")
   dateOfBirth    DateTime? @map("date_of_birth")
   gender         String?
-  enrollmentDate DateTime  @default(now())
-  isActive       Boolean   @default(true)
+  enrollmentDate DateTime  @default(now()) @map("enrollment_date")
+  isActive       Boolean   @default(true) @map("is_active")
 
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   school          School            @relation(fields: [schoolId], references: [id])
-  class           Class?            @relation(fields: [classId], references: [id])
+  classes         ClassStudent[]
   parentLinks     ParentStudent[]
   submissions     Submission[]
   grades          Grade[]
@@ -228,7 +228,7 @@ model Student {
   stockSales      StockSale[]
 
   @@unique([schoolId, studentNumber])
-  @@index([schoolId, classId])
+  @@index([schoolId])
   @@map("students")
 }
 
@@ -311,12 +311,28 @@ model Class {
 
   school         School          @relation(fields: [schoolId], references: [id])
   term           AcademicTerm    @relation(fields: [termId], references: [id])
-  students       Student[]
+  classStudents  ClassStudent[]
   subjects       Subject[]
   timetableSlots TimetableSlot[]
 
   @@index([schoolId])
   @@map("classes")
+}
+
+model ClassStudent {
+  id        String   @id @default(uuid())
+  schoolId  String   @map("school_id")
+  classId   String   @map("class_id")
+  studentId String   @map("student_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  school  School  @relation(fields: [schoolId], references: [id])
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@index([schoolId])
+  @@map("class_students")
 }
 
 model Subject {
