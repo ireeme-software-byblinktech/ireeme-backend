@@ -17,9 +17,9 @@ services:
     image: postgres:16-alpine
     container_name: blink-postgres
     environment:
-      POSTGRES_USER: blink_admin
-      POSTGRES_PASSWORD: "Blink@2025Secure!"
-      POSTGRES_DB: blink_campus_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:
