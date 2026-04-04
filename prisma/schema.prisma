@@ -1,0 +1,803 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum RoleType {
+  STUDENT
+  TEACHER
+  SCHOOL_ADMIN
+  SUPER_ADMIN
+  NURSE
+  DISCIPLINE_OFFICER
+  ACCOUNTANT
+  PARENT
+  LIBRARIAN
+}
+
+enum AssignmentType {
+  HOMEWORK
+  CAT
+  EXAM
+  PROJECT
+  QUIZ
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  RETURNED
+  LATE
+}
+
+enum AppealStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum CaseStatus {
+  OPEN
+  CLOSED
+  RESOLVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+  CARD
+}
+
+enum BorrowStatus {
+  BORROWED
+  RETURNED
+  OVERDUE
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum NotificationType {
+  GRADE
+  ASSIGNMENT
+  ATTENDANCE
+  HEALTH
+  DISCIPLINE
+  FINANCE
+  GENERAL
+  MESSAGE
+}
+
+enum ElectionStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum PermissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── IDENTITY DOMAIN ─────────────────────────────────────────────────────────
+
+model School {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  region    String?
+  logoUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users          User[]
+  students       Student[]
+  teachers       Teacher[]
+  parents        Parent[]
+  classes        Class[]
+  subjects       Subject[]
+  academicTerms  AcademicTerm[]
+  assignments    Assignment[]
+  grades         Grade[]
+  attendanceRecs AttendanceRecord[]
+  healthRecords  HealthRecord[]
+  medicalCases   MedicalCase[]
+  disciplineCases DisciplineCase[]
+  feeRecords     FeeRecord[]
+  libraryBooks   LibraryBook[]
+  notifications  Notification[]
+  elections      Election[]
+  uploadedFiles  UploadedFile[]
+
+  @@index([code])
+  @@map("schools")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  schoolId     String?
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  school           School?           @relation(fields: [schoolId], references: [id])
+  roles            UserRole[]
+  student          Student?
+  teacher          Teacher?
+  parent           Parent?
+  refreshTokens    RefreshToken[]
+  notifications    Notification[]
+  sentMessages     Message[]         @relation("SentMessages")
+  conversations    ConversationMember[]
+  aiConversations  AiConversation[]
+  attendanceMarked AttendanceRecord[] @relation("MarkedBy")
+  healthVisits     HealthRecord[]    @relation("NurseVisits")
+  disciplineCases  DisciplineCase[]  @relation("OfficerCases")
+  appointments     Appointment[]     @relation("NurseAppointments")
+
+  @@index([schoolId, email])
+  @@index([schoolId, isActive])
+  @@map("users")
+}
+
+model UserRole {
+  id     String   @id @default(uuid())
+  userId String
+  role   RoleType
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Student {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  schoolId       String
+  studentNumber  String
+  classId        String?
+  dateOfBirth    DateTime?
+  gender         String?
+  enrollmentDate DateTime  @default(now())
+  isActive       Boolean   @default(true)
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school          School            @relation(fields: [schoolId], references: [id])
+  class           Class?            @relation(fields: [classId], references: [id])
+  parentLinks     ParentStudent[]
+  submissions     Submission[]
+  grades          Grade[]
+  attendanceRecs  AttendanceRecord[]
+  healthRecords   HealthRecord[]
+  medicalCases    MedicalCase[]
+  appointments    Appointment[]
+  disciplineCases DisciplineCase[]
+  feeRecords      FeeRecord[]
+  borrowings      Borrowing[]
+  votes           Vote[]
+  permissionReqs  PermissionRequest[]
+  stockSales      StockSale[]
+
+  @@unique([schoolId, studentNumber])
+  @@index([schoolId, classId])
+  @@map("students")
+}
+
+model Teacher {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  schoolId    String
+  employeeNum String
+  department  String?
+  qualification String?
+  joiningDate DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school          School           @relation(fields: [schoolId], references: [id])
+  subjects        TeacherSubject[]
+  assignments     Assignment[]
+  grades          Grade[]
+  timetableSlots  TimetableSlot[]
+
+  @@unique([schoolId, employeeNum])
+  @@index([schoolId])
+  @@map("teachers")
+}
+
+model Parent {
+  id       String  @id @default(uuid())
+  userId   String  @unique
+  schoolId String
+  phone    String?
+  address  String?
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school   School          @relation(fields: [schoolId], references: [id])
+  children ParentStudent[]
+
+  @@index([schoolId])
+  @@map("parents")
+}
+
+model ParentStudent {
+  id        String  @id @default(uuid())
+  parentId  String
+  studentId String
+  verified  Boolean @default(false)
+
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@map("parent_students")
+}
+
+// ─── ACADEMIC DOMAIN ─────────────────────────────────────────────────────────
+
+model AcademicTerm {
+  id        String   @id @default(uuid())
+  schoolId  String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+
+  school      School       @relation(fields: [schoolId], references: [id])
+  classes     Class[]
+  grades      Grade[]
+  feeRecords  FeeRecord[]
+
+  @@index([schoolId])
+  @@map("academic_terms")
+}
+
+model Class {
+  id       String  @id @default(uuid())
+  schoolId String
+  name     String
+  year     Int
+  stream   String?
+  termId   String
+
+  school         School          @relation(fields: [schoolId], references: [id])
+  term           AcademicTerm    @relation(fields: [termId], references: [id])
+  students       Student[]
+  subjects       Subject[]
+  timetableSlots TimetableSlot[]
+
+  @@index([schoolId])
+  @@map("classes")
+}
+
+model Subject {
+  id       String  @id @default(uuid())
+  schoolId String
+  name     String
+  code     String
+  classId  String?
+
+  school          School           @relation(fields: [schoolId], references: [id])
+  class           Class?           @relation(fields: [classId], references: [id])
+  teachers        TeacherSubject[]
+  assignments     Assignment[]
+  grades          Grade[]
+  attendanceRecs  AttendanceRecord[]
+  timetableSlots  TimetableSlot[]
+
+  @@index([schoolId])
+  @@map("subjects")
+}
+
+model TeacherSubject {
+  teacherId String
+  subjectId String
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, subjectId])
+  @@map("teacher_subjects")
+}
+
+model TimetableSlot {
+  id        String  @id @default(uuid())
+  classId   String
+  subjectId String
+  teacherId String
+  dayOfWeek Int
+  startTime String
+  room      String?
+
+  class   Class   @relation(fields: [classId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+
+  @@index([classId])
+  @@map("timetable_slots")
+}
+
+model Assignment {
+  id          String         @id @default(uuid())
+  schoolId    String
+  subjectId   String
+  teacherId   String
+  title       String
+  description String?
+  type        AssignmentType
+  maxScore    Decimal        @db.Decimal(5, 2)
+  weight      Decimal        @db.Decimal(4, 2)
+  dueAt       DateTime
+  allowLate   Boolean        @default(false)
+  fileUrls    String[]
+  createdAt   DateTime       @default(now())
+
+  school      School       @relation(fields: [schoolId], references: [id])
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  submissions Submission[]
+
+  @@index([schoolId, subjectId, dueAt])
+  @@index([schoolId, teacherId])
+  @@map("assignments")
+}
+
+model Submission {
+  id           String           @id @default(uuid())
+  assignmentId String
+  studentId    String
+  fileUrls     String[]
+  submittedAt  DateTime         @default(now())
+  isLate       Boolean          @default(false)
+  status       SubmissionStatus @default(SUBMITTED)
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+  student    Student    @relation(fields: [studentId], references: [id])
+  grade      Grade?
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId, status])
+  @@map("submissions")
+}
+
+model Grade {
+  id           String       @id @default(uuid())
+  schoolId     String
+  submissionId String       @unique
+  studentId    String
+  subjectId    String
+  teacherId    String
+  termId       String
+  score        Decimal      @db.Decimal(6, 2)
+  maxScore     Decimal      @db.Decimal(6, 2)
+  feedback     String?
+  gradedAt     DateTime     @default(now())
+  appealStatus AppealStatus?
+
+  school     School       @relation(fields: [schoolId], references: [id])
+  submission Submission   @relation(fields: [submissionId], references: [id])
+  student    Student      @relation(fields: [studentId], references: [id])
+  subject    Subject      @relation(fields: [subjectId], references: [id])
+  teacher    Teacher      @relation(fields: [teacherId], references: [id])
+  term       AcademicTerm @relation(fields: [termId], references: [id])
+
+  @@index([schoolId, studentId, termId])
+  @@index([schoolId, subjectId, termId])
+  @@map("grades")
+}
+
+model AttendanceRecord {
+  id         String           @id @default(uuid())
+  schoolId   String
+  studentId  String
+  subjectId  String
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  markedById String
+  note       String?
+
+  school    School  @relation(fields: [schoolId], references: [id])
+  student   Student @relation(fields: [studentId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  markedBy  User    @relation("MarkedBy", fields: [markedById], references: [id])
+
+  @@unique([studentId, subjectId, date])
+  @@index([schoolId, date, status])
+  @@index([studentId, date])
+  @@map("attendance_records")
+}
+
+// ─── HEALTH DOMAIN ───────────────────────────────────────────────────────────
+
+model HealthRecord {
+  id        String   @id @default(uuid())
+  schoolId  String
+  studentId String
+  visitDate DateTime @default(now())
+  diagnosis String
+  treatment String?
+  nurseId   String
+
+  school  School  @relation(fields: [schoolId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+  nurse   User    @relation("NurseVisits", fields: [nurseId], references: [id])
+
+  @@index([schoolId, studentId])
+  @@map("health_records")
+}
+
+model MedicalCase {
+  id        String     @id @default(uuid())
+  schoolId  String
+  studentId String
+  diagnosis String
+  symptoms  String
+  openedAt  DateTime   @default(now())
+  status    CaseStatus @default(OPEN)
+
+  school  School  @relation(fields: [schoolId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@index([schoolId, studentId])
+  @@map("medical_cases")
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  studentId   String
+  nurseId     String
+  scheduledAt DateTime
+  reason      String
+  status      AppointmentStatus @default(PENDING)
+
+  student Student @relation(fields: [studentId], references: [id])
+  nurse   User    @relation("NurseAppointments", fields: [nurseId], references: [id])
+
+  @@index([studentId])
+  @@map("appointments")
+}
+
+// ─── DISCIPLINE DOMAIN ───────────────────────────────────────────────────────
+
+model OffenseType {
+  id             String          @id @default(uuid())
+  schoolId       String
+  name           String
+  pointDeduction Int
+
+  cases DisciplineCase[]
+
+  @@index([schoolId])
+  @@map("offense_types")
+}
+
+model DisciplineCase {
+  id           String     @id @default(uuid())
+  schoolId     String
+  studentId    String
+  officerId    String
+  offenseTypeId String
+  description  String
+  pointsDeduct Int
+  status       CaseStatus @default(OPEN)
+  evidenceUrls String[]
+  createdAt    DateTime   @default(now())
+
+  school      School          @relation(fields: [schoolId], references: [id])
+  student     Student         @relation(fields: [studentId], references: [id])
+  officer     User            @relation("OfficerCases", fields: [officerId], references: [id])
+  offenseType OffenseType     @relation(fields: [offenseTypeId], references: [id])
+  appeal      DisciplineAppeal?
+
+  @@index([schoolId, studentId])
+  @@map("discipline_cases")
+}
+
+model DisciplineAppeal {
+  id     String       @id @default(uuid())
+  caseId String       @unique
+  reason String
+  status AppealStatus @default(PENDING)
+
+  case DisciplineCase @relation(fields: [caseId], references: [id])
+
+  @@map("discipline_appeals")
+}
+
+// ─── FINANCE DOMAIN ──────────────────────────────────────────────────────────
+
+model FeeRecord {
+  id         String        @id @default(uuid())
+  schoolId   String
+  studentId  String
+  termId     String
+  totalFee   Decimal       @db.Decimal(10, 2)
+  amountPaid Decimal       @db.Decimal(10, 2) @default(0)
+  status     PaymentStatus @default(PENDING)
+
+  school       School        @relation(fields: [schoolId], references: [id])
+  student      Student       @relation(fields: [studentId], references: [id])
+  term         AcademicTerm  @relation(fields: [termId], references: [id])
+  transactions Transaction[]
+
+  @@index([schoolId, studentId])
+  @@map("fee_records")
+}
+
+model Transaction {
+  id          String        @id @default(uuid())
+  feeRecordId String
+  amount      Decimal       @db.Decimal(10, 2)
+  method      PaymentMethod
+  reference   String?
+  paidAt      DateTime      @default(now())
+
+  feeRecord FeeRecord @relation(fields: [feeRecordId], references: [id])
+
+  @@index([feeRecordId])
+  @@map("transactions")
+}
+
+model StockItem {
+  id       String  @id @default(uuid())
+  schoolId String
+  name     String
+  quantity Int
+  price    Decimal @db.Decimal(8, 2)
+
+  sales StockSale[]
+
+  @@index([schoolId])
+  @@map("stock_items")
+}
+
+model StockSale {
+  id        String @id @default(uuid())
+  itemId    String
+  studentId String
+  qty       Int
+  soldAt    DateTime @default(now())
+
+  item    StockItem @relation(fields: [itemId], references: [id])
+  student Student   @relation(fields: [studentId], references: [id])
+
+  @@map("stock_sales")
+}
+
+// ─── LIBRARY DOMAIN ──────────────────────────────────────────────────────────
+
+model LibraryBook {
+  id          String  @id @default(uuid())
+  schoolId    String
+  title       String
+  author      String
+  isbn        String?
+  genre       String?
+  totalCopies Int
+  available   Int
+  coverUrl    String?
+
+  school    School     @relation(fields: [schoolId], references: [id])
+  borrowings Borrowing[]
+
+  @@index([schoolId])
+  @@map("library_books")
+}
+
+model Borrowing {
+  id         String       @id @default(uuid())
+  bookId     String
+  studentId  String
+  borrowedAt DateTime     @default(now())
+  dueDate    DateTime
+  returnedAt DateTime?
+  status     BorrowStatus @default(BORROWED)
+
+  book    LibraryBook @relation(fields: [bookId], references: [id])
+  student Student     @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, returnedAt])
+  @@map("borrowings")
+}
+
+// ─── COMMUNICATION DOMAIN ────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  schoolId  String
+  title     String
+  body      String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  members  ConversationMember[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id     String @id @default(uuid())
+  convId String
+  userId String
+
+  conversation Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([convId, userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id       String   @id @default(uuid())
+  convId   String
+  senderId String
+  content  String
+  isRead   Boolean  @default(false)
+  sentAt   DateTime @default(now())
+
+  conversation Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([convId, sentAt])
+  @@map("messages")
+}
+
+// ─── ELECTIONS DOMAIN ────────────────────────────────────────────────────────
+
+model Election {
+  id       String         @id @default(uuid())
+  schoolId String
+  title    String
+  status   ElectionStatus @default(DRAFT)
+  startAt  DateTime
+  endAt    DateTime
+
+  school     School      @relation(fields: [schoolId], references: [id])
+  candidates Candidate[]
+
+  @@index([schoolId])
+  @@map("elections")
+}
+
+model Candidate {
+  id         String @id @default(uuid())
+  electionId String
+  studentId  String
+  bio        String?
+
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+
+  @@index([electionId])
+  @@map("candidates")
+}
+
+model Vote {
+  id          String @id @default(uuid())
+  candidateId String
+  studentId   String
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id])
+
+  @@unique([candidateId, studentId])
+  @@map("votes")
+}
+
+// ─── PERMISSIONS DOMAIN ──────────────────────────────────────────────────────
+
+model PermissionRequest {
+  id         String           @id @default(uuid())
+  studentId  String
+  reason     String
+  fromDate   DateTime
+  toDate     DateTime
+  status     PermissionStatus @default(PENDING)
+  approvedBy String?
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@map("permission_requests")
+}
+
+// ─── AI DOMAIN ───────────────────────────────────────────────────────────────
+
+model AiConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([userId])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  role           String   // 'user' | 'assistant'
+  content        String
+  sentAt         DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_messages")
+}
+
+// ─── FILES DOMAIN ────────────────────────────────────────────────────────────
+
+model UploadedFile {
+  id       String @id @default(uuid())
+  schoolId String
+  key      String @unique
+  bucket   String
+  mimeType String
+
+  school School @relation(fields: [schoolId], references: [id])
+
+  @@map("uploaded_files")
+}
