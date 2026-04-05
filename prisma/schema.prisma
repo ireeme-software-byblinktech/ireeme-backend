@@ -132,6 +132,7 @@ model School {
   medicalCases   MedicalCase[]
   disciplineCases DisciplineCase[]
   feeRecords     FeeRecord[]
+  transactions   Transaction[]
   libraryBooks   LibraryBook[]
   teacherSubjects TeacherSubject[]
   timetableSlots TimetableSlot[]
@@ -229,6 +230,7 @@ model Student {
 
   @@unique([schoolId, studentNumber])
   @@index([schoolId])
+  @@index([schoolId, isActive])
   @@map("students")
 }
 
@@ -599,14 +601,17 @@ model FeeRecord {
 model Transaction {
   id          String        @id @default(uuid())
   feeRecordId String
+  schoolId    String
   amount      Decimal       @db.Decimal(10, 2)
   method      PaymentMethod
   reference   String?
   paidAt      DateTime      @default(now())
 
   feeRecord FeeRecord @relation(fields: [feeRecordId], references: [id])
+  school    School    @relation(fields: [schoolId], references: [id])
 
   @@index([feeRecordId])
+  @@index([schoolId, paidAt])
   @@map("transactions")
 }
 
@@ -688,6 +693,7 @@ model Notification {
   school School @relation(fields: [schoolId], references: [id])
 
   @@index([userId, isRead])
+  @@index([userId, isRead, createdAt])
   @@map("notifications")
 }
 
