@@ -25,13 +25,23 @@ export class AuthService {
     const user = await this.authRepo.findUserByEmail(dto.email);
     if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
 
+    // Check if account is hard-locked (requires admin unlock)
+    const hardLocked = await this.redis.get(`login:hard-locked:${user.id}`);
+    if (hardLocked) throw new UnauthorizedException('Account locked. Contact your administrator.');
+
+    // Check if account is soft-locked (15-min cooldown)
+    const softLocked = await this.redis.get(`login:locked:${user.id}`);
+    if (softLocked) throw new UnauthorizedException('Too many failed attempts. Try again in 15 minutes.');
+
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
       await this.trackFailedLogin(user.id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Clear all failure counters on successful login
     await this.redis.del(`login:fails:${user.id}`);
+    await this.redis.del(`login:fails-1hr:${user.id}`);
     await this.authRepo.updateLastLogin(user.id);
 
     const roles = user.roles.map((r) => r.role);
@@ -85,11 +95,33 @@ export class AuthService {
   }
 
   private async trackFailedLogin(userId: string) {
-    const key = `login:fails:${userId}`;
-    const fails = await this.redis.incr(key);
-    await this.redis.expire(key, this.config.get<number>('RATE_LIMIT_TTL', 60) * 15);
-    if (fails >= 10) {
+    const now = Date.now();
+
+    // Tier 1: 15-min window counter (soft lock at 10)
+    const shortKey = `login:fails:${userId}`;
+    const shortFails = await this.redis.incr(shortKey);
+    await this.redis.expire(shortKey, 900); // 15 min TTL
+
+    if (shortFails >= 10) {
       await this.redis.setex(`login:locked:${userId}`, 900, '1');
     }
+
+    // Tier 2: 1-hr window counter (hard lock at 20 — requires admin unlock)
+    const hourKey = `login:fails-1hr:${userId}`;
+    const hourFails = await this.redis.incr(hourKey);
+    await this.redis.expire(hourKey, 3600); // 1 hr TTL
+
+    if (hourFails >= 20) {
+      // Hard lock — no TTL, only an admin can clear this
+      await this.redis.set(`login:hard-locked:${userId}`, '1');
+    }
+  }
+
+  /** Called by Super Admin / School Admin to unlock a hard-locked account */
+  async unlockAccount(userId: string): Promise<void> {
+    await this.redis.del(`login:hard-locked:${userId}`);
+    await this.redis.del(`login:locked:${userId}`);
+    await this.redis.del(`login:fails:${userId}`);
+    await this.redis.del(`login:fails-1hr:${userId}`);
   }
 }

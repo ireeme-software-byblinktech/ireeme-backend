@@ -1,10 +1,12 @@
-import { Controller, Post, Body, Res, Req, HttpCode, HttpStatus, Get } from '@nestjs/common';
+import { Controller, Post, Body, Res, Req, HttpCode, HttpStatus, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response, Request } from 'express';
+import { RoleType } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from './strategies/jwt.strategy';
 
@@ -62,6 +64,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user from token' })
   me(@CurrentUser() user: JwtPayload) {
     return user;
+  }
+
+  @Post('unlock/:userId')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: unlock a hard-locked account (20 failed logins in 1hr)' })
+  unlock(@Param('userId', ParseUUIDPipe) userId: string) {
+    return this.authService.unlockAccount(userId);
   }
 
   private parseJwt(user: JwtPayload): object {
