@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Body, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
 import { GradesService } from './grades.service';
@@ -23,8 +23,14 @@ export class GradesController {
   @Get('student/:studentId/:termId')
   @Roles(RoleType.STUDENT, RoleType.PARENT, RoleType.SCHOOL_ADMIN, RoleType.TEACHER)
   @ApiOperation({ summary: 'All grades + GPA for a student/term' })
-  studentGrades(@CurrentUser() user: JwtPayload, @Param('studentId', ParseUUIDPipe) studentId: string, @Param('termId', ParseUUIDPipe) termId: string) {
-    return this.service.getStudentGrades(studentId, termId, user.schoolId!);
+  studentGrades(
+    @CurrentUser() user: JwtPayload,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('termId', ParseUUIDPipe) termId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 50,
+  ) {
+    return this.service.getStudentGrades(studentId, termId, user.schoolId!, +page, +limit);
   }
 
   @Post(':id/appeal')

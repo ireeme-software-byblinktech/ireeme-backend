@@ -18,10 +18,13 @@ export class GradesRepository extends BaseRepository {
     });
   }
 
-  findByStudentTerm(studentId: string, termId: string, schoolId: string) {
+  findByStudentTerm(studentId: string, termId: string, schoolId: string, page = 1, limit = 50) {
     return this.prisma.grade.findMany({
       where: this.scopeToSchool(schoolId, { studentId, termId }),
       include: { subject: { select: { name: true, code: true } }, submission: { select: { assignmentId: true } } },
+      orderBy: { gradedAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
   }
 

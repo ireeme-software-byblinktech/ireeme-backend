@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { GradesController } from './grades.controller';
 import { GradesService } from './grades.service';
 import { GradesRepository } from './grades.repository';
-import { AssignmentsRepository } from '../assignments/assignments.repository';
+import { AssignmentsModule } from '../assignments/assignments.module';
 
 @Module({
+  imports: [AssignmentsModule],
   controllers: [GradesController],
-  providers: [GradesService, GradesRepository, AssignmentsRepository],
+  providers: [GradesService, GradesRepository],
   exports: [GradesService],
 })
 export class GradesModule {}
