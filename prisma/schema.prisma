@@ -201,11 +201,11 @@ model User {
 model UserRole {
   id       String   @id @default(uuid())
   userId   String   @map("user_id")
-  schoolId String   @map("school_id")
+  schoolId String?  @map("school_id")
   role     RoleType
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school School @relation(fields: [schoolId], references: [id])
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School? @relation(fields: [schoolId], references: [id])
 
   @@unique([userId, role])
   @@index([schoolId])
