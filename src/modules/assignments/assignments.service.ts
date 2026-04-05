@@ -49,4 +49,9 @@ export class AssignmentsService {
     this.events.emit('submission.created', { studentId, assignmentId, submissionId: submission.id });
     return submission;
   }
+
+  /** Exposed for GradesService — keeps layer chain clean */
+  findSubmission(submissionId: string) {
+    return this.repo.findSubmission(submissionId);
+  }
 }
