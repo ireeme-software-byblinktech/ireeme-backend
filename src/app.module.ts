@@ -30,6 +30,11 @@ import { GradesModule } from './modules/grades/grades.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { NotificationsListener } from './modules/notifications/notifications.listener';
+import { DisciplineModule } from './modules/discipline/discipline.module';
+import { HealthModule } from './modules/health/health.module';
+import { LibraryModule } from './modules/library/library.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { HealthCheckModule } from './modules/health-check/health-check.module';
 
 @Module({
   imports: [
@@ -40,10 +45,12 @@ import { NotificationsListener } from './modules/notifications/notifications.lis
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ([{
-        ttl: config.get<number>('RATE_LIMIT_TTL', 60) * 1000,
-        limit: config.get<number>('RATE_LIMIT_MAX', 300),
-      }]),
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get<number>('RATE_LIMIT_TTL', 60) * 1000,
+          limit: config.get<number>('RATE_LIMIT_MAX', 300),
+        },
+      ],
     }),
     QueuesModule,
     UploadsModule,
@@ -60,11 +67,13 @@ import { NotificationsListener } from './modules/notifications/notifications.lis
     GradesModule,
     AttendanceModule,
     NotificationsModule,
+    DisciplineModule,
+    HealthModule,
+    LibraryModule,
+    ReportsModule,
+    HealthCheckModule,
   ],
-  providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-    NotificationsListener,
-  ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, NotificationsListener],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

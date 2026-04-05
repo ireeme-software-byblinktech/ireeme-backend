@@ -19,7 +19,8 @@ export interface NotificationJobData {
 export class NotificationsProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
-    @Optional() @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    @Optional()
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
   ) {
     super();

@@ -5,7 +5,9 @@ import { AttendanceStatus } from '@prisma/client';
 
 @Injectable()
 export class AttendanceRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   /**
    * Upsert a batch of attendance records for a subject on a given date.
@@ -22,7 +24,15 @@ export class AttendanceRepository extends BaseRepository {
     const ops = records.map((r) =>
       this.prisma.attendanceRecord.upsert({
         where: { studentId_subjectId_date: { studentId: r.studentId, subjectId, date } },
-        create: { schoolId, studentId: r.studentId, subjectId, date, status: r.status, markedById, note: r.note },
+        create: {
+          schoolId,
+          studentId: r.studentId,
+          subjectId,
+          date,
+          status: r.status,
+          markedById,
+          note: r.note,
+        },
         update: { status: r.status, markedById, note: r.note },
       }),
     );

@@ -4,12 +4,20 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class SubjectsRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   findAll(schoolId: string, classId?: string) {
     return this.prisma.subject.findMany({
       where: this.scopeToSchool(schoolId, classId ? { classId } : {}),
-      include: { teachers: { include: { teacher: { include: { user: { select: { firstName: true, lastName: true } } } } } } },
+      include: {
+        teachers: {
+          include: {
+            teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+          },
+        },
+      },
     });
   }
 

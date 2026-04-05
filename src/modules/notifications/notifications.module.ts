@@ -8,12 +8,7 @@ import { QUEUE_NOTIFICATIONS, QUEUE_EMAILS } from '../../queues/queues.module';
 
 @Global()
 @Module({
-  imports: [
-    BullModule.registerQueue(
-      { name: QUEUE_NOTIFICATIONS },
-      { name: QUEUE_EMAILS },
-    ),
-  ],
+  imports: [BullModule.registerQueue({ name: QUEUE_NOTIFICATIONS }, { name: QUEUE_EMAILS })],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsProcessor, EmailsProcessor],
   exports: [NotificationsService],

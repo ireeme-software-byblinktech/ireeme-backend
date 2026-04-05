@@ -1,4 +1,13 @@
-import { Controller, Get, Patch, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Query,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -12,11 +21,7 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'Paginated notification inbox' })
-  findAll(
-    @CurrentUser() user: JwtPayload,
-    @Query('page') page = 1,
-    @Query('limit') limit = 25,
-  ) {
+  findAll(@CurrentUser() user: JwtPayload, @Query('page') page = 1, @Query('limit') limit = 25) {
     return this.service.findAll(user.sub, +page, +limit);
   }
 

@@ -3,7 +3,7 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
-  HttpStatus, 
+  HttpStatus,
   Inject,
   Optional,
   LoggerService,
@@ -42,7 +42,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         // class-validator returns { message: string[] | string, error: string }
         message = Array.isArray(resObj['message'])
           ? (resObj['message'] as string[]).join(', ')
-          : (resObj['message'] as string) ?? exception.message;
+          : ((resObj['message'] as string) ?? exception.message);
         error = (resObj['error'] as string) ?? HttpStatus[status] ?? 'Error';
       } else {
         message = exception.message;

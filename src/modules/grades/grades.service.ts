@@ -12,7 +12,12 @@ export class GradesService {
     private readonly events: EventEmitter2,
   ) {}
 
-  async gradeSubmission(submissionId: string, teacherId: string, schoolId: string, dto: GradeSubmissionDto) {
+  async gradeSubmission(
+    submissionId: string,
+    teacherId: string,
+    schoolId: string,
+    dto: GradeSubmissionDto,
+  ) {
     const submission = await this.assignmentsService.findSubmission(submissionId);
     if (!submission) throw new NotFoundException('Submission not found');
 
@@ -29,11 +34,21 @@ export class GradesService {
     });
 
     await this.repo.updateSubmissionStatus(submissionId, 'GRADED');
-    this.events.emit('grade.posted', { studentId: submission.studentId, gradeId: grade.id, score: dto.score });
+    this.events.emit('grade.posted', {
+      studentId: submission.studentId,
+      gradeId: grade.id,
+      score: dto.score,
+    });
     return grade;
   }
 
-  async getStudentGrades(studentId: string, termId: string, schoolId: string, page = 1, limit = 50) {
+  async getStudentGrades(
+    studentId: string,
+    termId: string,
+    schoolId: string,
+    page = 1,
+    limit = 50,
+  ) {
     const grades = await this.repo.findByStudentTerm(studentId, termId, schoolId, page, limit);
     const gpa = this.calculateGpa(grades);
     return { grades, gpa, page, limit };

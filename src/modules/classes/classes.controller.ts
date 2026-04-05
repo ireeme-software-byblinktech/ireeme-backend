@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Body, Param, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
 import { ClassesService } from './classes.service';
@@ -35,7 +45,11 @@ export class ClassesController {
 
   @Patch(':id')
   @Roles(RoleType.SCHOOL_ADMIN)
-  update(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Body() dto: Partial<CreateClassDto>) {
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: Partial<CreateClassDto>,
+  ) {
     return this.classesService.update(id, user.schoolId!, dto);
   }
 }

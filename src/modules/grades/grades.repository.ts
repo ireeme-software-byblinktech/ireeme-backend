@@ -4,12 +4,20 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class GradesRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   gradeSubmission(data: {
-    schoolId: string; submissionId: string; studentId: string;
-    subjectId: string; teacherId: string; termId: string;
-    score: number; maxScore: number; feedback?: string;
+    schoolId: string;
+    submissionId: string;
+    studentId: string;
+    subjectId: string;
+    teacherId: string;
+    termId: string;
+    score: number;
+    maxScore: number;
+    feedback?: string;
   }) {
     return this.prisma.grade.upsert({
       where: { submissionId: data.submissionId },
@@ -21,7 +29,10 @@ export class GradesRepository extends BaseRepository {
   findByStudentTerm(studentId: string, termId: string, schoolId: string, page = 1, limit = 50) {
     return this.prisma.grade.findMany({
       where: this.scopeToSchool(schoolId, { studentId, termId }),
-      include: { subject: { select: { name: true, code: true } }, submission: { select: { assignmentId: true } } },
+      include: {
+        subject: { select: { name: true, code: true } },
+        submission: { select: { assignmentId: true } },
+      },
       orderBy: { gradedAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,

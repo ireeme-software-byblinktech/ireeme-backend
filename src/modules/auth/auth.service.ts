@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -31,7 +27,8 @@ export class AuthService {
 
     // Check if account is soft-locked (15-min cooldown)
     const softLocked = await this.redis.get(`login:locked:${user.id}`);
-    if (softLocked) throw new UnauthorizedException('Too many failed attempts. Try again in 15 minutes.');
+    if (softLocked)
+      throw new UnauthorizedException('Too many failed attempts. Try again in 15 minutes.');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
@@ -95,8 +92,6 @@ export class AuthService {
   }
 
   private async trackFailedLogin(userId: string) {
-    const now = Date.now();
-
     // Tier 1: 15-min window counter (soft lock at 10)
     const shortKey = `login:fails:${userId}`;
     const shortFails = await this.redis.incr(shortKey);

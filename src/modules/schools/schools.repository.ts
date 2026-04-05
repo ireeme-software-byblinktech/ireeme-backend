@@ -24,7 +24,10 @@ export class SchoolsRepository extends BaseRepository {
     return this.prisma.school.create({ data });
   }
 
-  update(id: string, data: Partial<{ name: string; region: string; logoUrl: string; isActive: boolean }>) {
+  update(
+    id: string,
+    data: Partial<{ name: string; region: string; logoUrl: string; isActive: boolean }>,
+  ) {
     return this.prisma.school.update({ where: { id }, data });
   }
 }

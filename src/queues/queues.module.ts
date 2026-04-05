@@ -3,9 +3,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 
 export const QUEUE_NOTIFICATIONS = 'notifications';
-export const QUEUE_REPORTS       = 'reports';
+export const QUEUE_REPORTS = 'reports';
 export const QUEUE_FILE_PROCESSING = 'file-processing';
-export const QUEUE_EMAILS        = 'emails';
+export const QUEUE_EMAILS = 'emails';
 
 @Global()
 @Module({

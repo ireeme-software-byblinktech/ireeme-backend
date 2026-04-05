@@ -1,9 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../database/prisma.service';
 import { QUEUE_NOTIFICATIONS, QUEUE_EMAILS } from '../../queues/queues.module';
-import { NotificationType } from '@prisma/client';
 import { NotificationJobData } from '../../queues/processors/notifications.processor';
 import { EmailJobData } from '../../queues/processors/emails.processor';
 
@@ -17,7 +16,10 @@ export class NotificationsService {
 
   /** Queue a notification — non-blocking */
   async send(data: NotificationJobData): Promise<void> {
-    await this.notifQueue.add('send-notification', data, { attempts: 3, backoff: { type: 'exponential', delay: 1000 } });
+    await this.notifQueue.add('send-notification', data, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 },
+    });
   }
 
   /** Queue an email — non-blocking */

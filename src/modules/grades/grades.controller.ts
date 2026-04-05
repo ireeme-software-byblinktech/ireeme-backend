@@ -16,7 +16,11 @@ export class GradesController {
   @Patch('submissions/:submissionId/grade')
   @Roles(RoleType.TEACHER)
   @ApiOperation({ summary: 'Post score + feedback → triggers notification' })
-  grade(@CurrentUser() user: JwtPayload, @Param('submissionId', ParseUUIDPipe) id: string, @Body() dto: GradeSubmissionDto) {
+  grade(
+    @CurrentUser() user: JwtPayload,
+    @Param('submissionId', ParseUUIDPipe) id: string,
+    @Body() dto: GradeSubmissionDto,
+  ) {
     return this.service.gradeSubmission(id, user.sub, user.schoolId!, dto);
   }
 

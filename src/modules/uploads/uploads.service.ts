@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client,
@@ -12,14 +12,16 @@ import { PrismaService } from '../../database/prisma.service';
 
 // Allowed MIME types and their magic bytes (first N bytes)
 const ALLOWED_TYPES: Record<string, { magic: number[]; ext: string }> = {
-  'application/pdf':  { magic: [0x25, 0x50, 0x44, 0x46], ext: 'pdf' },
-  'image/jpeg':       { magic: [0xff, 0xd8, 0xff],        ext: 'jpg' },
-  'image/png':        { magic: [0x89, 0x50, 0x4e, 0x47],  ext: 'png' },
-  'image/gif':        { magic: [0x47, 0x49, 0x46, 0x38],  ext: 'gif' },
-  'image/webp':       { magic: [0x52, 0x49, 0x46, 0x46],  ext: 'webp' },
+  'application/pdf': { magic: [0x25, 0x50, 0x44, 0x46], ext: 'pdf' },
+  'image/jpeg': { magic: [0xff, 0xd8, 0xff], ext: 'jpg' },
+  'image/png': { magic: [0x89, 0x50, 0x4e, 0x47], ext: 'png' },
+  'image/gif': { magic: [0x47, 0x49, 0x46, 0x38], ext: 'gif' },
+  'image/webp': { magic: [0x52, 0x49, 0x46, 0x46], ext: 'webp' },
   'application/msword': { magic: [0xd0, 0xcf, 0x11, 0xe0], ext: 'doc' },
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                      { magic: [0x50, 0x4b, 0x03, 0x04],  ext: 'docx' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
+    magic: [0x50, 0x4b, 0x03, 0x04],
+    ext: 'docx',
+  },
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -55,11 +57,7 @@ export class UploadsService {
    * Validates MIME type (declared + magic bytes) and file size,
    * uploads to S3/MinIO under a UUID key, and records the file in DB.
    */
-  async upload(
-    file: Express.Multer.File,
-    schoolId: string,
-    folder = 'uploads',
-  ): Promise<string> {
+  async upload(file: Express.Multer.File, schoolId: string, folder = 'uploads'): Promise<string> {
     this.validateSize(file);
     const mimeType = this.validateMime(file);
 
@@ -87,11 +85,9 @@ export class UploadsService {
 
   /** Returns a short-lived pre-signed URL (15 min) */
   async getSignedUrl(key: string): Promise<string> {
-    return getSignedUrl(
-      this.s3,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn: 900 },
-    );
+    return getSignedUrl(this.s3, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      expiresIn: 900,
+    });
   }
 
   async delete(key: string): Promise<void> {

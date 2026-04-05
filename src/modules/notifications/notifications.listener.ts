@@ -29,7 +29,11 @@ export class NotificationsListener {
   }
 
   @OnEvent('submission.created')
-  async onSubmissionCreated(payload: { studentId: string; assignmentId: string; submissionId: string }) {
+  async onSubmissionCreated(payload: {
+    studentId: string;
+    assignmentId: string;
+    submissionId: string;
+  }) {
     const student = await this.prisma.student.findUnique({
       where: { id: payload.studentId },
       select: { userId: true, schoolId: true },
@@ -46,7 +50,12 @@ export class NotificationsListener {
   }
 
   @OnEvent('attendance.marked')
-  async onAttendanceMarked(payload: { studentId: string; schoolId: string; status: string; date: string }) {
+  async onAttendanceMarked(payload: {
+    studentId: string;
+    schoolId: string;
+    status: string;
+    date: string;
+  }) {
     const student = await this.prisma.student.findUnique({
       where: { id: payload.studentId },
       select: { userId: true },

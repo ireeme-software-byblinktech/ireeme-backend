@@ -14,7 +14,8 @@ export interface EmailJobData {
 @Injectable()
 export class EmailsProcessor extends WorkerHost {
   constructor(
-    @Optional() @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    @Optional()
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
   ) {
     super();

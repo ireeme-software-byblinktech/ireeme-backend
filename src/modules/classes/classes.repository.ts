@@ -4,7 +4,9 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class ClassesRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   findAll(schoolId: string) {
     return this.prisma.class.findMany({
@@ -19,7 +21,12 @@ export class ClassesRepository extends BaseRepository {
       include: {
         students: { include: { user: { select: { firstName: true, lastName: true } } } },
         subjects: true,
-        timetableSlots: { include: { subject: true, teacher: { include: { user: { select: { firstName: true, lastName: true } } } } } },
+        timetableSlots: {
+          include: {
+            subject: true,
+            teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+          },
+        },
       },
     });
   }
@@ -28,7 +35,10 @@ export class ClassesRepository extends BaseRepository {
     return this.prisma.class.create({ data });
   }
 
-  update(id: string, data: Partial<{ name: string; year: number; stream: string; termId: string }>) {
+  update(
+    id: string,
+    data: Partial<{ name: string; year: number; stream: string; termId: string }>,
+  ) {
     return this.prisma.class.update({ where: { id }, data });
   }
 }

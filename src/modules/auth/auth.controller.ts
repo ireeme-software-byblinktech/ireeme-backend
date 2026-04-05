@@ -1,4 +1,15 @@
-import { Controller, Post, Body, Res, Req, HttpCode, HttpStatus, Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Req,
+  HttpCode,
+  HttpStatus,
+  Get,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response, Request } from 'express';
 import { RoleType } from '@prisma/client';
@@ -33,7 +44,11 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotate refresh token' })
-  async refresh(@Body() dto: RefreshDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Body() dto: RefreshDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     // Accept from body or cookie
     const token = dto.refreshToken || req.cookies?.refresh_token;
     // userId must come from the expired access token — client sends it in body for simplicity

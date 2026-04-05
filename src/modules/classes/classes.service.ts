@@ -6,7 +6,9 @@ import { CreateClassDto } from './dto/create-class.dto';
 export class ClassesService {
   constructor(private readonly classesRepo: ClassesRepository) {}
 
-  findAll(schoolId: string) { return this.classesRepo.findAll(schoolId); }
+  findAll(schoolId: string) {
+    return this.classesRepo.findAll(schoolId);
+  }
 
   async findById(id: string, schoolId: string) {
     const cls = await this.classesRepo.findById(id, schoolId);
