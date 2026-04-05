@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { HealthRepository } from './health.repository';
 import { CreateHealthRecordDto } from './dto/create-health-record.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -35,7 +35,14 @@ export class HealthService {
     return this.repo.findMedicalCasesByStudent(studentId, schoolId);
   }
 
-  closeMedicalCase(id: string) {
+  async findMedicalCaseById(id: string) {
+    const c = await this.repo.findMedicalCaseById(id);
+    if (!c) throw new NotFoundException('Medical case not found');
+    return c;
+  }
+
+  async closeMedicalCase(id: string) {
+    await this.findMedicalCaseById(id);
     return this.repo.updateMedicalCaseStatus(id, 'CLOSED');
   }
 

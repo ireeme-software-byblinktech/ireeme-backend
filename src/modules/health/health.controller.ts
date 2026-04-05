@@ -1,6 +1,14 @@
 import {
-  Controller, Get, Post, Patch, Body, Param,
-  Query, ParseUUIDPipe, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { RoleType, AppointmentStatus } from '@prisma/client';

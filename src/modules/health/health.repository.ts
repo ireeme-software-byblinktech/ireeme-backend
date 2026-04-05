@@ -5,7 +5,9 @@ import { AppointmentStatus } from '@prisma/client';
 
 @Injectable()
 export class HealthRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   // ── Health records ─────────────────────────────────────────────────────────
 
@@ -17,7 +19,9 @@ export class HealthRepository extends BaseRepository {
     diagnosis: string;
     treatment?: string;
   }) {
-    return this.prisma.healthRecord.create({ data: { ...data, visitDate: data.visitDate ?? new Date() } });
+    return this.prisma.healthRecord.create({
+      data: { ...data, visitDate: data.visitDate ?? new Date() },
+    });
   }
 
   findRecordsByStudent(studentId: string, schoolId: string, page = 1, limit = 25) {
@@ -32,7 +36,12 @@ export class HealthRepository extends BaseRepository {
 
   // ── Medical cases ──────────────────────────────────────────────────────────
 
-  createMedicalCase(data: { schoolId: string; studentId: string; diagnosis: string; symptoms: string }) {
+  createMedicalCase(data: {
+    schoolId: string;
+    studentId: string;
+    diagnosis: string;
+    symptoms: string;
+  }) {
     return this.prisma.medicalCase.create({ data });
   }
 
@@ -41,6 +50,10 @@ export class HealthRepository extends BaseRepository {
       where: this.scopeToSchool(schoolId, { studentId }),
       orderBy: { openedAt: 'desc' },
     });
+  }
+
+  findMedicalCaseById(id: string) {
+    return this.prisma.medicalCase.findUnique({ where: { id } });
   }
 
   updateMedicalCaseStatus(id: string, status: any) {
