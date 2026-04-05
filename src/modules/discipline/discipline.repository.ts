@@ -5,7 +5,9 @@ import { CaseStatus } from '@prisma/client';
 
 @Injectable()
 export class DisciplineRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   // ── Offense types ──────────────────────────────────────────────────────────
 
@@ -19,7 +21,13 @@ export class DisciplineRepository extends BaseRepository {
 
   // ── Cases ──────────────────────────────────────────────────────────────────
 
-  async findAll(schoolId: string, page: number, limit: number, studentId?: string, status?: CaseStatus) {
+  async findAll(
+    schoolId: string,
+    page: number,
+    limit: number,
+    studentId?: string,
+    status?: CaseStatus,
+  ) {
     const where = this.scopeToSchool(schoolId, {
       ...(studentId && { studentId }),
       ...(status && { status }),

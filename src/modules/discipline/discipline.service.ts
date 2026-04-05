@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DisciplineRepository } from './discipline.repository';
 import { CreateCaseDto } from './dto/create-case.dto';
@@ -60,6 +60,9 @@ export class DisciplineService {
   }
 
   async resolveAppeal(caseId: string, schoolId: string, status: 'APPROVED' | 'REJECTED') {
+    if (status !== 'APPROVED' && status !== 'REJECTED') {
+      throw new BadRequestException('Appeal status must be APPROVED or REJECTED');
+    }
     await this.findById(caseId, schoolId);
     const appeal = await this.repo.findAppeal(caseId);
     if (!appeal) throw new NotFoundException('No appeal found for this case');
