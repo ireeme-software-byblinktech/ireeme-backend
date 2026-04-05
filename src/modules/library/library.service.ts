@@ -44,7 +44,7 @@ export class LibraryService {
     return borrowing;
   }
 
-  async returnBook(borrowingId: string, schoolId: string) {
+  async returnBook(borrowingId: string, _schoolId: string) {
     const borrowing = await this.repo.findBorrowingById(borrowingId);
     if (!borrowing) throw new NotFoundException('Borrowing record not found');
     if (borrowing.returnedAt) throw new BadRequestException('Book already returned');

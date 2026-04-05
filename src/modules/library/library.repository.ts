@@ -4,11 +4,19 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class LibraryRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   // ── Books ──────────────────────────────────────────────────────────────────
 
-  async findAllBooks(schoolId: string, page: number, limit: number, search?: string, genre?: string) {
+  async findAllBooks(
+    schoolId: string,
+    page: number,
+    limit: number,
+    search?: string,
+    genre?: string,
+  ) {
     const where = this.scopeToSchool(schoolId, {
       ...(genre && { genre }),
       ...(search && {
@@ -41,8 +49,13 @@ export class LibraryRepository extends BaseRepository {
   }
 
   createBook(data: {
-    schoolId: string; title: string; author: string;
-    isbn?: string; genre?: string; totalCopies: number; coverUrl?: string;
+    schoolId: string;
+    title: string;
+    author: string;
+    isbn?: string;
+    genre?: string;
+    totalCopies: number;
+    coverUrl?: string;
   }) {
     return this.prisma.libraryBook.create({ data: { ...data, available: data.totalCopies } });
   }
