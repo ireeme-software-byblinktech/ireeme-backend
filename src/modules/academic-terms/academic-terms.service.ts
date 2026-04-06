@@ -6,8 +6,12 @@ import { CreateTermDto } from './dto/create-term.dto';
 export class AcademicTermsService {
   constructor(private readonly repo: AcademicTermsRepository) {}
 
-  findAll(schoolId: string) { return this.repo.findAll(schoolId); }
-  findActive(schoolId: string) { return this.repo.findActive(schoolId); }
+  findAll(schoolId: string) {
+    return this.repo.findAll(schoolId);
+  }
+  findActive(schoolId: string) {
+    return this.repo.findActive(schoolId);
+  }
 
   async findById(id: string, schoolId: string) {
     const t = await this.repo.findById(id, schoolId);
@@ -17,7 +21,12 @@ export class AcademicTermsService {
 
   async create(schoolId: string, dto: CreateTermDto) {
     if (dto.isActive) await this.repo.deactivateAll(schoolId);
-    return this.repo.create({ schoolId, ...dto, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate) });
+    return this.repo.create({
+      schoolId,
+      ...dto,
+      startDate: new Date(dto.startDate),
+      endDate: new Date(dto.endDate),
+    });
   }
 
   async update(id: string, schoolId: string, dto: Partial<CreateTermDto>) {

@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
 import { TeachersService } from './teachers.service';
@@ -39,14 +51,22 @@ export class TeachersController {
   @Patch(':id')
   @Roles(RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Update teacher profile' })
-  update(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTeacherDto) {
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTeacherDto,
+  ) {
     return this.teachersService.update(id, user.schoolId!, dto);
   }
 
   @Post(':id/subjects/:subjectId')
   @Roles(RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Assign subject to teacher' })
-  assignSubject(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Param('subjectId', ParseUUIDPipe) subjectId: string) {
+  assignSubject(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('subjectId', ParseUUIDPipe) subjectId: string,
+  ) {
     return this.teachersService.assignSubject(id, user.schoolId!, subjectId);
   }
 
@@ -54,7 +74,11 @@ export class TeachersController {
   @Roles(RoleType.SCHOOL_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove subject from teacher' })
-  removeSubject(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Param('subjectId', ParseUUIDPipe) subjectId: string) {
+  removeSubject(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('subjectId', ParseUUIDPipe) subjectId: string,
+  ) {
     return this.teachersService.removeSubject(id, user.schoolId!, subjectId);
   }
 }

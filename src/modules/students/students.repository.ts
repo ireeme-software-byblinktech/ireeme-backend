@@ -31,7 +31,10 @@ export class StudentsRepository extends BaseRepository {
         where,
         skip: (page - 1) * limit,
         take: limit,
-        include: { user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } }, class: { select: { name: true } } },
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+          class: { select: { name: true } },
+        },
         orderBy: { user: { lastName: 'asc' } },
       }),
       this.prisma.student.count({ where }),
@@ -44,9 +47,24 @@ export class StudentsRepository extends BaseRepository {
     return this.prisma.student.findFirst({
       where: this.scopeToSchool(schoolId, { id }),
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, lastLoginAt: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+            lastLoginAt: true,
+          },
+        },
         class: true,
-        parentLinks: { include: { parent: { include: { user: { select: { firstName: true, lastName: true, email: true } } } } } },
+        parentLinks: {
+          include: {
+            parent: {
+              include: { user: { select: { firstName: true, lastName: true, email: true } } },
+            },
+          },
+        },
       },
     });
   }
@@ -71,13 +89,17 @@ export class StudentsRepository extends BaseRepository {
     });
   }
 
-  update(id: string, schoolId: string, data: Partial<{
-    classId: string;
-    dateOfBirth: Date;
-    gender: string;
-    isActive: boolean;
-    studentNumber: string;
-  }>) {
+  update(
+    id: string,
+    schoolId: string,
+    data: Partial<{
+      classId: string;
+      dateOfBirth: Date;
+      gender: string;
+      isActive: boolean;
+      studentNumber: string;
+    }>,
+  ) {
     return this.prisma.student.update({
       where: { id },
       data,
@@ -103,20 +125,44 @@ export class StudentsRepository extends BaseRepository {
           schoolId,
           dueAt: { gte: new Date() },
           subjectId: {
-            in: (await this.prisma.subject.findMany({
-              where: { schoolId, classId: (await this.prisma.student.findUnique({ where: { id: studentId }, select: { classId: true } }))?.classId ?? undefined },
-              select: { id: true },
-            })).map((s) => s.id),
+            in: (
+              await this.prisma.subject.findMany({
+                where: {
+                  schoolId,
+                  classId:
+                    (
+                      await this.prisma.student.findUnique({
+                        where: { id: studentId },
+                        select: { classId: true },
+                      })
+                    )?.classId ?? undefined,
+                },
+                select: { id: true },
+              })
+            ).map((s) => s.id),
           },
         },
         orderBy: { dueAt: 'asc' },
         take: 5,
-        select: { id: true, title: true, dueAt: true, type: true, subject: { select: { name: true } } },
+        select: {
+          id: true,
+          title: true,
+          dueAt: true,
+          type: true,
+          subject: { select: { name: true } },
+        },
       }),
       this.prisma.notification.count({
-        where: { userId: (
-          await this.prisma.student.findUnique({ where: { id: studentId }, select: { userId: true } })
-        )?.userId ?? '', isRead: false },
+        where: {
+          userId:
+            (
+              await this.prisma.student.findUnique({
+                where: { id: studentId },
+                select: { userId: true },
+              })
+            )?.userId ?? '',
+          isRead: false,
+        },
       }),
     ]);
 

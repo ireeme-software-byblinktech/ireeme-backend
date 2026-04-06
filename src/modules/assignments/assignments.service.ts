@@ -38,15 +38,33 @@ export class AssignmentsService {
     });
   }
 
-  async submit(assignmentId: string, studentId: string, schoolId: string, dto: SubmitAssignmentDto) {
+  async submit(
+    assignmentId: string,
+    studentId: string,
+    schoolId: string,
+    dto: SubmitAssignmentDto,
+  ) {
     const assignment = await this.findById(assignmentId, schoolId);
     const now = new Date();
-    const isLate = now > assignment.dueAt && !assignment.allowLate;
     if (now > assignment.dueAt && !assignment.allowLate) {
       throw new BadRequestException('Submission deadline has passed');
     }
-    const submission = await this.repo.upsertSubmission(assignmentId, studentId, dto.fileUrls, now > assignment.dueAt);
-    this.events.emit('submission.created', { studentId, assignmentId, submissionId: submission.id });
+    const submission = await this.repo.upsertSubmission(
+      assignmentId,
+      studentId,
+      dto.fileUrls,
+      now > assignment.dueAt,
+    );
+    this.events.emit('submission.created', {
+      studentId,
+      assignmentId,
+      submissionId: submission.id,
+    });
     return submission;
+  }
+
+  /** Exposed for GradesService — keeps layer chain clean */
+  findSubmission(submissionId: string) {
+    return this.repo.findSubmission(submissionId);
   }
 }

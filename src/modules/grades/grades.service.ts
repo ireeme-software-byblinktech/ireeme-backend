@@ -1,37 +1,57 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GradesRepository } from './grades.repository';
-import { AssignmentsRepository } from '../assignments/assignments.repository';
+import { AssignmentsService } from '../assignments/assignments.service';
 import { GradeSubmissionDto, AppealDto, ResolveAppealDto } from './dto/grade-submission.dto';
 
 @Injectable()
 export class GradesService {
   constructor(
     private readonly repo: GradesRepository,
-    private readonly assignmentsRepo: AssignmentsRepository,
+    private readonly assignmentsService: AssignmentsService,
     private readonly events: EventEmitter2,
   ) {}
 
-  async gradeSubmission(submissionId: string, teacherId: string, schoolId: string, dto: GradeSubmissionDto) {
-    const submission = await this.assignmentsRepo.findSubmission(submissionId);
+  async gradeSubmission(
+    submissionId: string,
+    teacherId: string,
+    schoolId: string,
+    dto: GradeSubmissionDto,
+  ) {
+    const submission = await this.assignmentsService.findSubmission(submissionId);
     if (!submission) throw new NotFoundException('Submission not found');
 
     const grade = await this.repo.gradeSubmission({
-      schoolId, submissionId, studentId: submission.studentId,
-      subjectId: submission.assignment.subjectId, teacherId,
-      termId: dto.termId, score: dto.score,
-      maxScore: Number(submission.assignment.maxScore), feedback: dto.feedback,
+      schoolId,
+      submissionId,
+      studentId: submission.studentId,
+      subjectId: submission.assignment.subjectId,
+      teacherId,
+      termId: dto.termId,
+      score: dto.score,
+      maxScore: Number(submission.assignment.maxScore),
+      feedback: dto.feedback,
     });
 
     await this.repo.updateSubmissionStatus(submissionId, 'GRADED');
-    this.events.emit('grade.posted', { studentId: submission.studentId, gradeId: grade.id, score: dto.score });
+    this.events.emit('grade.posted', {
+      studentId: submission.studentId,
+      gradeId: grade.id,
+      score: dto.score,
+    });
     return grade;
   }
 
-  async getStudentGrades(studentId: string, termId: string, schoolId: string) {
-    const grades = await this.repo.findByStudentTerm(studentId, termId, schoolId);
+  async getStudentGrades(
+    studentId: string,
+    termId: string,
+    schoolId: string,
+    page = 1,
+    limit = 50,
+  ) {
+    const grades = await this.repo.findByStudentTerm(studentId, termId, schoolId, page, limit);
     const gpa = this.calculateGpa(grades);
-    return { grades, gpa };
+    return { grades, gpa, page, limit };
   }
 
   async submitAppeal(gradeId: string, _dto: AppealDto) {

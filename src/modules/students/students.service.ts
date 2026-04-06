@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import Redis from 'ioredis';
 import { StudentsRepository } from './students.repository';
 import { UsersService } from '../users/users.service';
@@ -90,6 +85,8 @@ export class StudentsService {
   }
 
   private generateTempPassword(): string {
-    return Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-4).toUpperCase();
+    return (
+      Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-4).toUpperCase()
+    );
   }
 }

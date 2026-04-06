@@ -45,10 +45,7 @@ export class StudentsController {
   @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER)
   @ApiOperation({ summary: 'Full student profile (404 if wrong school)' })
   @ApiParam({ name: 'id', type: String })
-  findOne(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  findOne(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.studentsService.findById(id, user.schoolId!);
   }
 
@@ -66,10 +63,7 @@ export class StudentsController {
   @Get(':id/dashboard')
   @Roles(RoleType.STUDENT)
   @ApiOperation({ summary: 'Aggregated student dashboard (Redis cached 5 min)' })
-  getDashboard(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  getDashboard(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.studentsService.getDashboard(id, user.schoolId!);
   }
 }

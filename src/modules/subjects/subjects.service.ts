@@ -6,7 +6,9 @@ import { CreateSubjectDto } from './dto/create-subject.dto';
 export class SubjectsService {
   constructor(private readonly repo: SubjectsRepository) {}
 
-  findAll(schoolId: string, classId?: string) { return this.repo.findAll(schoolId, classId); }
+  findAll(schoolId: string, classId?: string) {
+    return this.repo.findAll(schoolId, classId);
+  }
 
   async findById(id: string, schoolId: string) {
     const s = await this.repo.findById(id, schoolId);
@@ -14,7 +16,9 @@ export class SubjectsService {
     return s;
   }
 
-  create(schoolId: string, dto: CreateSubjectDto) { return this.repo.create({ schoolId, ...dto }); }
+  create(schoolId: string, dto: CreateSubjectDto) {
+    return this.repo.create({ schoolId, ...dto });
+  }
 
   async update(id: string, schoolId: string, dto: Partial<CreateSubjectDto>) {
     await this.findById(id, schoolId);
