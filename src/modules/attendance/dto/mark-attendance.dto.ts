@@ -1,4 +1,12 @@
-import { IsUUID, IsDateString, IsArray, ValidateNested, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsUUID,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { AttendanceStatus } from '@prisma/client';
@@ -13,6 +21,8 @@ export class MarkBulkAttendanceDto {
   @ApiProperty() @IsUUID() subjectId: string;
   @ApiProperty() @IsDateString() date: string;
   @ApiProperty({ type: [AttendanceEntryDto] })
-  @IsArray() @ValidateNested({ each: true }) @Type(() => AttendanceEntryDto)
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttendanceEntryDto)
   records: AttendanceEntryDto[];
 }

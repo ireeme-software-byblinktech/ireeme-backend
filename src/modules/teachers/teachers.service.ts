@@ -24,14 +24,17 @@ export class TeachersService {
 
   async create(schoolId: string, dto: CreateTeacherDto) {
     const user = await this.usersService.createWithRole({
-      schoolId, email: dto.email,
+      schoolId,
+      email: dto.email,
       password: Math.random().toString(36).slice(-10),
-      firstName: dto.firstName, lastName: dto.lastName,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
       role: RoleType.TEACHER,
     });
     try {
       return await this.teachersRepo.create({
-        userId: user.id, schoolId,
+        userId: user.id,
+        schoolId,
         employeeNum: dto.employeeNum,
         department: dto.department,
         qualification: dto.qualification,
@@ -56,5 +59,10 @@ export class TeachersService {
   async removeSubject(id: string, schoolId: string, subjectId: string) {
     await this.findById(id, schoolId);
     return this.teachersRepo.removeSubject(id, subjectId);
+  }
+
+  async deactivate(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.teachersRepo.update(id, { isActive: false });
   }
 }

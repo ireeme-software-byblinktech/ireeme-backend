@@ -258,6 +258,7 @@ model Student {
 
   @@unique([schoolId, studentNumber])
   @@index([schoolId, classId])
+  @@index([schoolId])
   @@index([schoolId, isActive])
   @@map("students")
 }
@@ -670,6 +671,7 @@ model Transaction {
 
   @@index([schoolId])
   @@index([feeRecordId])
+  @@index([schoolId, paidAt])
   @@map("transactions")
 }
 
@@ -759,6 +761,7 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([schoolId])
+  @@index([userId, isRead, createdAt])
   @@map("notifications")
 }
 

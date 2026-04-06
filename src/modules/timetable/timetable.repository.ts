@@ -4,7 +4,9 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class TimetableRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   findByClass(classId: string) {
     return this.prisma.timetableSlot.findMany({
@@ -25,7 +27,14 @@ export class TimetableRepository extends BaseRepository {
     });
   }
 
-  create(data: { classId: string; subjectId: string; teacherId: string; dayOfWeek: number; startTime: string; room?: string }) {
+  create(data: {
+    classId: string;
+    subjectId: string;
+    teacherId: string;
+    dayOfWeek: number;
+    startTime: string;
+    room?: string;
+  }) {
     return this.prisma.timetableSlot.create({ data });
   }
 

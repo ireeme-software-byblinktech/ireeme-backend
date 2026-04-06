@@ -4,7 +4,9 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class AssignmentsRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   findAll(schoolId: string, filters: { subjectId?: string; teacherId?: string } = {}) {
     return this.prisma.assignment.findMany({
@@ -17,19 +19,39 @@ export class AssignmentsRepository extends BaseRepository {
   findById(id: string, schoolId: string) {
     return this.prisma.assignment.findFirst({
       where: this.scopeToSchool(schoolId, { id }),
-      include: { subject: true, submissions: { select: { id: true, studentId: true, status: true, submittedAt: true } } },
+      include: {
+        subject: true,
+        submissions: { select: { id: true, studentId: true, status: true, submittedAt: true } },
+      },
     });
   }
 
   create(data: {
-    schoolId: string; subjectId: string; teacherId: string; title: string;
-    description?: string; type: any; maxScore: number; weight: number;
-    dueAt: Date; allowLate?: boolean; fileUrls?: string[];
+    schoolId: string;
+    subjectId: string;
+    teacherId: string;
+    title: string;
+    description?: string;
+    type: any;
+    maxScore: number;
+    weight: number;
+    dueAt: Date;
+    allowLate?: boolean;
+    fileUrls?: string[];
   }) {
     return this.prisma.assignment.create({ data });
   }
 
-  update(id: string, data: Partial<{ title: string; description: string; dueAt: Date; maxScore: number; allowLate: boolean }>) {
+  update(
+    id: string,
+    data: Partial<{
+      title: string;
+      description: string;
+      dueAt: Date;
+      maxScore: number;
+      allowLate: boolean;
+    }>,
+  ) {
     return this.prisma.assignment.update({ where: { id }, data });
   }
 

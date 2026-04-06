@@ -22,9 +22,7 @@ const devConsoleFormat = combine(
   printf(({ level, message, timestamp, context, requestId, ...meta }) => {
     const ctx = context ? ` [${context}]` : '';
     const rid = requestId ? ` {${requestId}}` : '';
-    const extra = Object.keys(meta).length
-      ? `\n  ${JSON.stringify(meta, null, 2)}`
-      : '';
+    const extra = Object.keys(meta).length ? `\n  ${JSON.stringify(meta, null, 2)}` : '';
     return `${timestamp}${ctx}${rid} ${level}: ${message}${extra}`;
   }),
 );

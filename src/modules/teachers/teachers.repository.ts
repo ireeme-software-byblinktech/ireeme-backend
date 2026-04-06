@@ -4,7 +4,9 @@ import { BaseRepository } from '../../database/base.repository';
 
 @Injectable()
 export class TeachersRepository extends BaseRepository {
-  constructor(prisma: PrismaService) { super(prisma); }
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
   findAll(schoolId: string, page = 1, limit = 25) {
     const where = this.scopeToSchool(schoolId);
@@ -12,7 +14,9 @@ export class TeachersRepository extends BaseRepository {
       where,
       skip: (page - 1) * limit,
       take: limit,
-      include: { user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } } },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+      },
     });
   }
 
@@ -26,11 +30,29 @@ export class TeachersRepository extends BaseRepository {
     });
   }
 
-  create(data: { userId: string; schoolId: string; employeeNum: string; department?: string; qualification?: string; joiningDate?: Date }) {
-    return this.prisma.teacher.create({ data, include: { user: { select: { firstName: true, lastName: true, email: true } } } });
+  create(data: {
+    userId: string;
+    schoolId: string;
+    employeeNum: string;
+    department?: string;
+    qualification?: string;
+    joiningDate?: Date;
+  }) {
+    return this.prisma.teacher.create({
+      data,
+      include: { user: { select: { firstName: true, lastName: true, email: true } } },
+    });
   }
 
-  update(id: string, data: Partial<{ employeeNum: string; department: string; qualification: string; isActive: boolean }>) {
+  update(
+    id: string,
+    data: Partial<{
+      employeeNum: string;
+      department: string;
+      qualification: string;
+      isActive: boolean;
+    }>,
+  ) {
     return this.prisma.teacher.update({ where: { id }, data });
   }
 
@@ -43,6 +65,8 @@ export class TeachersRepository extends BaseRepository {
   }
 
   removeSubject(teacherId: string, subjectId: string) {
-    return this.prisma.teacherSubject.delete({ where: { teacherId_subjectId: { teacherId, subjectId } } });
+    return this.prisma.teacherSubject.delete({
+      where: { teacherId_subjectId: { teacherId, subjectId } },
+    });
   }
 }
