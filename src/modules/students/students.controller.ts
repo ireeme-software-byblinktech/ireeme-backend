@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -65,5 +66,13 @@ export class StudentsController {
   @ApiOperation({ summary: 'Aggregated student dashboard (Redis cached 5 min)' })
   getDashboard(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.studentsService.getDashboard(id, user.schoolId!);
+  }
+
+  @Delete(':id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Deactivate student (soft delete)' })
+  deactivate(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.studentsService.deactivate(id, user.schoolId!);
   }
 }
