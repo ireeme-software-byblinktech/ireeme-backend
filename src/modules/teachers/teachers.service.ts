@@ -60,4 +60,9 @@ export class TeachersService {
     await this.findById(id, schoolId);
     return this.teachersRepo.removeSubject(id, subjectId);
   }
+
+  async deactivate(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.teachersRepo.update(id, { isActive: false });
+  }
 }

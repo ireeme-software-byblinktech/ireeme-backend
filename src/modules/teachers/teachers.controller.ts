@@ -81,4 +81,12 @@ export class TeachersController {
   ) {
     return this.teachersService.removeSubject(id, user.schoolId!, subjectId);
   }
+
+  @Delete(':id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Deactivate teacher (soft delete)' })
+  deactivate(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.teachersService.deactivate(id, user.schoolId!);
+  }
 }
