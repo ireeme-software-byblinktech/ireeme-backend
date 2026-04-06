@@ -117,47 +117,28 @@ model School {
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
-  users               User[]
-  students            Student[]
-  teachers            Teacher[]
-  staffs              Staff[]
-  parents             Parent[]
-  parentStudents      ParentStudent[]
-  classes             Class[]
-  classStudents       ClassStudent[]
-  subjects            Subject[]
-  academicTerms       AcademicTerm[]
-  assignments         Assignment[]
-  submissions         Submission[]
-  grades              Grade[]
-  attendanceRecs      AttendanceRecord[]
-  healthRecords       HealthRecord[]
-  medicalCases        MedicalCase[]
-  appointments        Appointment[]
-  offenseTypes        OffenseType[]
-  disciplineCases     DisciplineCase[]
-  disciplineAppeals   DisciplineAppeal[]
-  feeRecords          FeeRecord[]
-  transactions        Transaction[]
-  stockItems          StockItem[]
-  stockSales          StockSale[]
-  libraryBooks        LibraryBook[]
-  borrowings          Borrowing[]
-  notifications       Notification[]
-  conversations       Conversation[]
-  conversationMembers ConversationMember[]
-  messages            Message[]
-  elections           Election[]
-  candidates          Candidate[]
-  votes               Vote[]
-  permissionReqs      PermissionRequest[]
-  aiConversations     AiConversation[]
-  aiMessages          AiMessage[]
-  uploadedFiles       UploadedFile[]
-  userRoles           UserRole[]
-  refreshTokens       RefreshToken[]
-  teacherSubjects     TeacherSubject[]
-  timetableSlots      TimetableSlot[]
+  users          User[]
+  students       Student[]
+  teachers       Teacher[]
+  parents        Parent[]
+  classes        Class[]
+  classStudents  ClassStudent[]
+  subjects       Subject[]
+  academicTerms  AcademicTerm[]
+  assignments    Assignment[]
+  grades         Grade[]
+  attendanceRecs AttendanceRecord[]
+  healthRecords  HealthRecord[]
+  medicalCases   MedicalCase[]
+  disciplineCases DisciplineCase[]
+  feeRecords     FeeRecord[]
+  transactions   Transaction[]
+  libraryBooks   LibraryBook[]
+  teacherSubjects TeacherSubject[]
+  timetableSlots TimetableSlot[]
+  notifications  Notification[]
+  elections      Election[]
+  uploadedFiles  UploadedFile[]
 
   @@index([code])
   @@map("schools")
@@ -257,7 +238,10 @@ model Student {
   stockSales      StockSale[]
 
   @@unique([schoolId, studentNumber])
+<<<<<<< HEAD
   @@index([schoolId, classId])
+=======
+>>>>>>> 78a60e9 (Reinforced the assignment crud)
   @@index([schoolId])
   @@index([schoolId, isActive])
   @@map("students")
@@ -659,8 +643,8 @@ model FeeRecord {
 
 model Transaction {
   id          String        @id @default(uuid())
-  schoolId    String        @map("school_id")
-  feeRecordId String        @map("fee_record_id")
+  feeRecordId String
+  schoolId    String
   amount      Decimal       @db.Decimal(10, 2)
   method      PaymentMethod
   reference   String?
@@ -668,6 +652,7 @@ model Transaction {
 
   school    School    @relation(fields: [schoolId], references: [id])
   feeRecord FeeRecord @relation(fields: [feeRecordId], references: [id])
+  school    School    @relation(fields: [schoolId], references: [id])
 
   @@index([schoolId])
   @@index([feeRecordId])
@@ -760,7 +745,10 @@ model Notification {
   school School @relation(fields: [schoolId], references: [id])
 
   @@index([userId, isRead])
+<<<<<<< HEAD
   @@index([schoolId])
+=======
+>>>>>>> 78a60e9 (Reinforced the assignment crud)
   @@index([userId, isRead, createdAt])
   @@map("notifications")
 }

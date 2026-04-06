@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AssignmentType } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { BaseRepository } from '../../database/base.repository';
 
@@ -32,7 +33,7 @@ export class AssignmentsRepository extends BaseRepository {
     teacherId: string;
     title: string;
     description?: string;
-    type: any;
+    type: AssignmentType;
     maxScore: number;
     weight: number;
     dueAt: Date;
@@ -55,10 +56,10 @@ export class AssignmentsRepository extends BaseRepository {
     return this.prisma.assignment.update({ where: { id }, data });
   }
 
-  upsertSubmission(assignmentId: string, studentId: string, fileUrls: string[], isLate: boolean) {
+  upsertSubmission(assignmentId: string, studentId: string,schoolId:string, fileUrls: string[], isLate: boolean) {
     return this.prisma.submission.upsert({
       where: { assignmentId_studentId: { assignmentId, studentId } },
-      create: { assignmentId, studentId, fileUrls, isLate, status: isLate ? 'LATE' : 'SUBMITTED' },
+      create: { assignmentId, studentId,schoolId, fileUrls, isLate, status: isLate ? 'LATE' : 'SUBMITTED' },
       update: { fileUrls, isLate, status: isLate ? 'LATE' : 'SUBMITTED', submittedAt: new Date() },
     });
   }

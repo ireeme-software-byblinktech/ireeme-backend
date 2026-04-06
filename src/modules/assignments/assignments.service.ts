@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AssignmentsRepository } from './assignments.repository';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 
 @Injectable()
@@ -27,8 +28,14 @@ export class AssignmentsService {
     return this.repo.create({ schoolId, teacherId, ...dto, dueAt });
   }
 
-  async update(id: string, schoolId: string, dto: Partial<CreateAssignmentDto>) {
+  async update(id: string, schoolId: string, dto: UpdateAssignmentDto) {
     await this.findById(id, schoolId);
+
+    if (dto.dueAt) {
+      const dueAt = new Date(dto.dueAt);
+      if (dueAt <= new Date()) throw new BadRequestException('dueAt must be in the future');
+    }
+
     return this.repo.update(id, {
       ...(dto.title && { title: dto.title }),
       ...(dto.description && { description: dto.description }),
@@ -52,6 +59,7 @@ export class AssignmentsService {
     const submission = await this.repo.upsertSubmission(
       assignmentId,
       studentId,
+      schoolId,
       dto.fileUrls,
       now > assignment.dueAt,
     );
