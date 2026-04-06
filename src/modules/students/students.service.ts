@@ -68,6 +68,11 @@ export class StudentsService {
     });
   }
 
+  async deactivate(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.studentsRepo.update(id, schoolId, { isActive: false });
+  }
+
   async getDashboard(studentId: string, schoolId: string) {
     const cacheKey = `dashboard:${schoolId}:${studentId}`;
     const cached = await this.redis.get(cacheKey);
