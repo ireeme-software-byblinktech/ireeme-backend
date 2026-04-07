@@ -93,11 +93,10 @@ CREATE TABLE "students" (
     "userId" TEXT NOT NULL,
     "school_id" TEXT NOT NULL,
     "student_number" TEXT NOT NULL,
-    "class_id" TEXT,
     "date_of_birth" TIMESTAMP(3),
     "gender" TEXT,
-    "enrollmentDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "enrollment_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "students_pkey" PRIMARY KEY ("id")
 );
@@ -159,6 +158,17 @@ CREATE TABLE "classes" (
     "term_id" TEXT NOT NULL,
 
     CONSTRAINT "classes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "class_students" (
+    "id" TEXT NOT NULL,
+    "school_id" TEXT NOT NULL,
+    "class_id" TEXT NOT NULL,
+    "student_id" TEXT NOT NULL,
+    "enrolled_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "class_students_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -348,6 +358,7 @@ CREATE TABLE "fee_records" (
 CREATE TABLE "transactions" (
     "id" TEXT NOT NULL,
     "feeRecordId" TEXT NOT NULL,
+    "schoolId" TEXT NOT NULL,
     "amount" DECIMAL(10,2) NOT NULL,
     "method" "PaymentMethod" NOT NULL,
     "reference" TEXT,
@@ -517,9 +528,12 @@ CREATE TABLE "ai_messages" (
 CREATE TABLE "uploaded_files" (
     "id" TEXT NOT NULL,
     "schoolId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
     "key" TEXT NOT NULL,
     "bucket" TEXT NOT NULL,
     "mimeType" TEXT NOT NULL,
+    "sizeBytes" INTEGER NOT NULL,
+    "scanStatus" TEXT NOT NULL DEFAULT 'PENDING',
 
     CONSTRAINT "uploaded_files_pkey" PRIMARY KEY ("id")
 );
@@ -549,7 +563,10 @@ CREATE INDEX "refresh_tokens_userId_idx" ON "refresh_tokens"("userId");
 CREATE UNIQUE INDEX "students_userId_key" ON "students"("userId");
 
 -- CreateIndex
-CREATE INDEX "students_school_id_class_id_idx" ON "students"("school_id", "class_id");
+CREATE INDEX "students_school_id_idx" ON "students"("school_id");
+
+-- CreateIndex
+CREATE INDEX "students_school_id_is_active_idx" ON "students"("school_id", "is_active");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "students_school_id_student_number_key" ON "students"("school_id", "student_number");
@@ -577,6 +594,12 @@ CREATE INDEX "academic_terms_school_id_idx" ON "academic_terms"("school_id");
 
 -- CreateIndex
 CREATE INDEX "classes_school_id_idx" ON "classes"("school_id");
+
+-- CreateIndex
+CREATE INDEX "class_students_school_id_idx" ON "class_students"("school_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "class_students_class_id_student_id_key" ON "class_students"("class_id", "student_id");
 
 -- CreateIndex
 CREATE INDEX "subjects_school_id_idx" ON "subjects"("school_id");
@@ -651,6 +674,9 @@ CREATE INDEX "fee_records_schoolId_studentId_idx" ON "fee_records"("schoolId", "
 CREATE INDEX "transactions_feeRecordId_idx" ON "transactions"("feeRecordId");
 
 -- CreateIndex
+CREATE INDEX "transactions_schoolId_paidAt_idx" ON "transactions"("schoolId", "paidAt");
+
+-- CreateIndex
 CREATE INDEX "stock_items_schoolId_idx" ON "stock_items"("schoolId");
 
 -- CreateIndex
@@ -661,6 +687,9 @@ CREATE INDEX "borrowings_studentId_returnedAt_idx" ON "borrowings"("studentId", 
 
 -- CreateIndex
 CREATE INDEX "notifications_userId_isRead_idx" ON "notifications"("userId", "isRead");
+
+-- CreateIndex
+CREATE INDEX "notifications_userId_isRead_createdAt_idx" ON "notifications"("userId", "isRead", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "conversation_members_convId_userId_key" ON "conversation_members"("convId", "userId");
@@ -686,6 +715,9 @@ CREATE INDEX "ai_conversations_userId_idx" ON "ai_conversations"("userId");
 -- CreateIndex
 CREATE UNIQUE INDEX "uploaded_files_key_key" ON "uploaded_files"("key");
 
+-- CreateIndex
+CREATE INDEX "uploaded_files_schoolId_userId_idx" ON "uploaded_files"("schoolId", "userId");
+
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_school_id_fkey" FOREIGN KEY ("school_id") REFERENCES "schools"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -700,9 +732,6 @@ ALTER TABLE "students" ADD CONSTRAINT "students_userId_fkey" FOREIGN KEY ("userI
 
 -- AddForeignKey
 ALTER TABLE "students" ADD CONSTRAINT "students_school_id_fkey" FOREIGN KEY ("school_id") REFERENCES "schools"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "students" ADD CONSTRAINT "students_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "teachers" ADD CONSTRAINT "teachers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -730,6 +759,15 @@ ALTER TABLE "classes" ADD CONSTRAINT "classes_school_id_fkey" FOREIGN KEY ("scho
 
 -- AddForeignKey
 ALTER TABLE "classes" ADD CONSTRAINT "classes_term_id_fkey" FOREIGN KEY ("term_id") REFERENCES "academic_terms"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "class_students" ADD CONSTRAINT "class_students_school_id_fkey" FOREIGN KEY ("school_id") REFERENCES "schools"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "class_students" ADD CONSTRAINT "class_students_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "class_students" ADD CONSTRAINT "class_students_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "students"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_school_id_fkey" FOREIGN KEY ("school_id") REFERENCES "schools"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -852,6 +890,9 @@ ALTER TABLE "fee_records" ADD CONSTRAINT "fee_records_termId_fkey" FOREIGN KEY (
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_feeRecordId_fkey" FOREIGN KEY ("feeRecordId") REFERENCES "fee_records"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "schools"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "stock_sales" ADD CONSTRAINT "stock_sales_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "stock_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -907,3 +948,6 @@ ALTER TABLE "ai_messages" ADD CONSTRAINT "ai_messages_conversationId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "uploaded_files" ADD CONSTRAINT "uploaded_files_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "schools"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "uploaded_files" ADD CONSTRAINT "uploaded_files_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

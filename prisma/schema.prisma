@@ -171,6 +171,7 @@ model User {
   healthVisits     HealthRecord[]    @relation("NurseVisits")
   disciplineCases  DisciplineCase[]  @relation("OfficerCases")
   appointments     Appointment[]     @relation("NurseAppointments")
+  uploadedFiles    UploadedFile[]
 
   @@index([schoolId, email])
   @@index([schoolId, isActive])
@@ -822,13 +823,18 @@ model AiMessage {
 // ─── FILES DOMAIN ────────────────────────────────────────────────────────────
 
 model UploadedFile {
-  id       String @id @default(uuid())
-  schoolId String
-  key      String @unique
-  bucket   String
-  mimeType String
+  id         String  @id @default(uuid())
+  schoolId   String
+  userId     String
+  key        String  @unique
+  bucket     String
+  mimeType   String
+  sizeBytes  Int
+  scanStatus String  @default("PENDING") // PENDING | CLEAN | INFECTED
 
   school School @relation(fields: [schoolId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
+  @@index([schoolId, userId])
   @@map("uploaded_files")
 }
