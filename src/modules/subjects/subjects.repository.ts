@@ -32,4 +32,20 @@ export class SubjectsRepository extends BaseRepository {
   update(id: string, data: Partial<{ name: string; code: string; classId: string }>) {
     return this.prisma.subject.update({ where: { id }, data });
   }
+
+  remove(id: string) {
+    return this.prisma.subject.delete({ where: { id } });
+  }
+
+  assignTeacher(subjectId: string, teacherId: string, schoolId: string) {
+    return this.prisma.teacherSubject.create({
+      data: { subjectId, teacherId, schoolId },
+    });
+  }
+
+  removeTeacher(subjectId: string, teacherId: string) {
+    return this.prisma.teacherSubject.delete({
+      where: { teacherId_subjectId: { teacherId, subjectId } },
+    });
+  }
 }

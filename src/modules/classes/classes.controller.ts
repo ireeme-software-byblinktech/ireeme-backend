@@ -45,6 +45,9 @@ export class ClassesController {
     return this.classesService.findById(id, user.schoolId!);
   }
 
+  @Patch(':id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Update a class' })
   update(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
