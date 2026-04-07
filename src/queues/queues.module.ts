@@ -6,6 +6,8 @@ export const QUEUE_NOTIFICATIONS = 'notifications';
 export const QUEUE_REPORTS = 'reports';
 export const QUEUE_FILE_PROCESSING = 'file-processing';
 export const QUEUE_EMAILS = 'emails';
+export const QUEUE_AI_CHAT = 'ai-chat';
+export const QUEUE_CLEANUP = 'cleanup';
 
 @Global()
 @Module({
@@ -25,6 +27,8 @@ export const QUEUE_EMAILS = 'emails';
       { name: QUEUE_REPORTS },
       { name: QUEUE_FILE_PROCESSING },
       { name: QUEUE_EMAILS },
+      { name: QUEUE_AI_CHAT },
+      { name: QUEUE_CLEANUP },
     ),
   ],
   exports: [BullModule],
