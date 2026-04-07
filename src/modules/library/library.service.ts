@@ -34,6 +34,7 @@ export class LibraryService {
 
     const [borrowing] = await Promise.all([
       this.repo.createBorrowing({
+        schoolId,
         bookId: dto.bookId,
         studentId: dto.studentId,
         dueDate: new Date(dto.dueDate),

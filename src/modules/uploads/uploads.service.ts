@@ -1,3 +1,4 @@
+/// <reference types="multer" />
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {

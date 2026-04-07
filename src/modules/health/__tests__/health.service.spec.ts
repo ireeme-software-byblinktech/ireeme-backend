@@ -75,7 +75,7 @@ describe('HealthService', () => {
       };
       mockRepo.createAppointment.mockResolvedValue({ id: 'appt-1' });
 
-      const result = await service.createAppointment(dto);
+      const result = await service.createAppointment('school-1', dto);
       expect(result.id).toBe('appt-1');
       expect(mockRepo.createAppointment).toHaveBeenCalledWith(
         expect.objectContaining({ scheduledAt: new Date('2025-02-01T10:00:00Z') }),

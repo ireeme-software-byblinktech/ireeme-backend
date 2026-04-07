@@ -33,7 +33,7 @@ export class StudentsRepository extends BaseRepository {
         take: limit,
         include: {
           user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
-          class: { select: { name: true } },
+          classes: { select: { class: { select: { name: true } } } },
         },
         orderBy: { user: { lastName: 'asc' } },
       }),
@@ -57,7 +57,7 @@ export class StudentsRepository extends BaseRepository {
             lastLoginAt: true,
           },
         },
-        class: true,
+        classes: { include: { class: true } },
         parentLinks: {
           include: {
             parent: {

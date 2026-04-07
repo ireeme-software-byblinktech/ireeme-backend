@@ -76,7 +76,7 @@ export class LibraryRepository extends BaseRepository {
 
   // ── Borrowings ─────────────────────────────────────────────────────────────
 
-  createBorrowing(data: { bookId: string; studentId: string; dueDate: Date }) {
+  createBorrowing(data: { schoolId: string; bookId: string; studentId: string; dueDate: Date }) {
     return this.prisma.borrowing.create({ data });
   }
 

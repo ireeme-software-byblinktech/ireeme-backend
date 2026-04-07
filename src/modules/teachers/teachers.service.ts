@@ -53,7 +53,7 @@ export class TeachersService {
 
   async assignSubject(id: string, schoolId: string, subjectId: string) {
     await this.findById(id, schoolId);
-    return this.teachersRepo.assignSubject(id, subjectId);
+    return this.teachersRepo.assignSubject(id, schoolId, subjectId);
   }
 
   async removeSubject(id: string, schoolId: string, subjectId: string) {

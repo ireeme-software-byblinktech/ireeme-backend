@@ -82,8 +82,8 @@ export class DisciplineRepository extends BaseRepository {
 
   // ── Appeals ────────────────────────────────────────────────────────────────
 
-  createAppeal(caseId: string, reason: string) {
-    return this.prisma.disciplineAppeal.create({ data: { caseId, reason } });
+  createAppeal(caseId: string, schoolId: string, reason: string) {
+    return this.prisma.disciplineAppeal.create({ data: { caseId, schoolId, reason } });
   }
 
   findAppeal(caseId: string) {

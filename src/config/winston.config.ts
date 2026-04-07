@@ -1,5 +1,5 @@
 import * as winston from 'winston';
-import 'winston-daily-rotate-file';
+import DailyRotateFile = require('winston-daily-rotate-file');
 
 const { combine, timestamp, json, errors, colorize, printf } = winston.format;
 
@@ -36,7 +36,7 @@ const transports: winston.transport[] = [
   }),
 
   // Errors only — daily rotation, keep 30 days
-  new winston.transports.DailyRotateFile({
+  new DailyRotateFile({
     level: 'error',
     dirname: 'logs',
     filename: 'error-%DATE%.log',
@@ -47,7 +47,7 @@ const transports: winston.transport[] = [
   }),
 
   // All levels — daily rotation, keep 14 days
-  new winston.transports.DailyRotateFile({
+  new DailyRotateFile({
     level: logLevel,
     dirname: 'logs',
     filename: 'combined-%DATE%.log',

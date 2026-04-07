@@ -86,7 +86,7 @@ export class AuthService {
     );
     const refreshExpires = new Date();
     refreshExpires.setDate(refreshExpires.getDate() + refreshExpiryDays);
-    await this.authRepo.saveRefreshToken(userId, refreshHash, refreshExpires);
+    await this.authRepo.saveRefreshToken(userId, schoolId, refreshHash, refreshExpires);
 
     return { accessToken, refreshToken };
   }

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BaseRepository } from '../../database/base.repository';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @Injectable()
 export class TimetableRepository extends BaseRepository {
@@ -28,6 +31,7 @@ export class TimetableRepository extends BaseRepository {
   }
 
   create(data: {
+    schoolId: string;
     classId: string;
     subjectId: string;
     teacherId: string;
