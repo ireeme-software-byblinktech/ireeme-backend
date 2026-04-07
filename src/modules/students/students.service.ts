@@ -45,12 +45,10 @@ export class StudentsService {
         userId: user.id,
         schoolId,
         studentNumber: dto.studentNumber,
-        classId: dto.classId,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         gender: dto.gender,
       });
     } catch (err: any) {
-      // Unique constraint on studentNumber
       if (err?.code === 'P2002') {
         throw new ConflictException('Student number already exists in this school');
       }
@@ -59,10 +57,9 @@ export class StudentsService {
   }
 
   async update(id: string, schoolId: string, dto: UpdateStudentDto) {
-    await this.findById(id, schoolId); // ensures 404 if wrong school
+    await this.findById(id, schoolId);
     return this.studentsRepo.update(id, schoolId, {
       ...(dto.studentNumber && { studentNumber: dto.studentNumber }),
-      ...(dto.classId && { classId: dto.classId }),
       ...(dto.dateOfBirth && { dateOfBirth: new Date(dto.dateOfBirth) }),
       ...(dto.gender && { gender: dto.gender }),
     });

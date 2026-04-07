@@ -62,7 +62,6 @@ export class ReportsService {
         name: `${studentUser?.firstName ?? ''} ${studentUser?.lastName ?? ''}`.trim(),
         email: studentUser?.email ?? null,
         avatarUrl: studentUser?.avatarUrl ?? null,
-        classId: student.classId,
       },
       term: { id: term.id, name: term.name, startDate: term.startDate, endDate: term.endDate },
       grades: grades.map((g) => ({

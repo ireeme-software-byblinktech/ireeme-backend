@@ -19,7 +19,9 @@ export class ClassesRepository extends BaseRepository {
     return this.prisma.class.findFirst({
       where: this.scopeToSchool(schoolId, { id }),
       include: {
-        classStudents: { include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } } },
+        classStudents: {
+          include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } },
+        },
         subjects: true,
         timetableSlots: {
           include: {

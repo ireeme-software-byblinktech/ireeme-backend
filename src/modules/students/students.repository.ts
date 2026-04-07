@@ -33,7 +33,11 @@ export class StudentsRepository extends BaseRepository {
         take: limit,
         include: {
           user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+<<<<<<< feat/files-module-ir115-ir116-ir117
+          classes: { include: { class: { select: { name: true } } } },
+=======
           classes: { select: { class: { select: { name: true } } } },
+>>>>>>> main
         },
         orderBy: { user: { lastName: 'asc' } },
       }),
@@ -57,7 +61,11 @@ export class StudentsRepository extends BaseRepository {
             lastLoginAt: true,
           },
         },
+<<<<<<< feat/files-module-ir115-ir116-ir117
+        classes: { include: { class: { select: { name: true, year: true } } } },
+=======
         classes: { include: { class: true } },
+>>>>>>> main
         parentLinks: {
           include: {
             parent: {
@@ -79,7 +87,6 @@ export class StudentsRepository extends BaseRepository {
     userId: string;
     schoolId: string;
     studentNumber: string;
-    classId?: string;
     dateOfBirth?: Date;
     gender?: string;
   }) {
@@ -93,7 +100,6 @@ export class StudentsRepository extends BaseRepository {
     id: string,
     schoolId: string,
     data: Partial<{
-      classId: string;
       dateOfBirth: Date;
       gender: string;
       isActive: boolean;
@@ -129,13 +135,13 @@ export class StudentsRepository extends BaseRepository {
               await this.prisma.subject.findMany({
                 where: {
                   schoolId,
-                  classId:
-                    (
-                      await this.prisma.student.findUnique({
-                        where: { id: studentId },
-                        select: { classId: true },
-                      })
-                    )?.classId ?? undefined,
+                  classId: (
+                    await this.prisma.classStudent.findFirst({
+                      where: { studentId },
+                      select: { classId: true },
+                      orderBy: { enrolledAt: 'desc' },
+                    })
+                  )?.classId ?? undefined,
                 },
                 select: { id: true },
               })

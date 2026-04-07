@@ -7,6 +7,7 @@ const mockRepo = {
   findRecordsByStudent: jest.fn(),
   createMedicalCase: jest.fn(),
   findMedicalCasesByStudent: jest.fn(),
+  findMedicalCaseById: jest.fn(),
   updateMedicalCaseStatus: jest.fn(),
   createAppointment: jest.fn(),
   findAppointmentsByStudent: jest.fn(),
@@ -87,11 +88,19 @@ describe('HealthService', () => {
 
   describe('closeMedicalCase', () => {
     it('updates medical case status to CLOSED', async () => {
+      mockRepo.findMedicalCaseById.mockResolvedValue({ id: 'case-1', status: 'OPEN' });
       mockRepo.updateMedicalCaseStatus.mockResolvedValue({ id: 'case-1', status: 'CLOSED' });
 
       const result = await service.closeMedicalCase('case-1');
       expect(mockRepo.updateMedicalCaseStatus).toHaveBeenCalledWith('case-1', 'CLOSED');
       expect(result.status).toBe('CLOSED');
+    });
+
+    it('throws NotFoundException when medical case not found', async () => {
+      const { NotFoundException } = await import('@nestjs/common');
+      mockRepo.findMedicalCaseById.mockResolvedValue(null);
+
+      await expect(service.closeMedicalCase('bad-id')).rejects.toThrow(NotFoundException);
     });
   });
 });

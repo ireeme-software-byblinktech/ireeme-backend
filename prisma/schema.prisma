@@ -188,10 +188,18 @@ model User {
   sentMessages     Message[]            @relation("SentMessages")
   conversations    ConversationMember[]
   aiConversations  AiConversation[]
+<<<<<<< feat/files-module-ir115-ir116-ir117
+  attendanceMarked AttendanceRecord[] @relation("MarkedBy")
+  healthVisits     HealthRecord[]    @relation("NurseVisits")
+  disciplineCases  DisciplineCase[]  @relation("OfficerCases")
+  appointments     Appointment[]     @relation("NurseAppointments")
+  uploadedFiles    UploadedFile[]
+=======
   attendanceMarked AttendanceRecord[]   @relation("MarkedBy")
   healthVisits     HealthRecord[]       @relation("NurseVisits")
   disciplineCases  DisciplineCase[]     @relation("OfficerCases")
   appointments     Appointment[]        @relation("NurseAppointments")
+>>>>>>> main
 
   @@index([schoolId, email])
   @@index([schoolId, isActive])
@@ -915,14 +923,30 @@ model AiMessage {
 // ─── FILES DOMAIN ────────────────────────────────────────────────────────────
 
 model UploadedFile {
+<<<<<<< feat/files-module-ir115-ir116-ir117
+  id         String  @id @default(uuid())
+  schoolId   String
+  userId     String
+  key        String  @unique
+  bucket     String
+  mimeType   String
+  sizeBytes  Int
+  scanStatus String  @default("PENDING") // PENDING | CLEAN | INFECTED
+=======
   id       String @id @default(uuid())
   schoolId String @map("school_id")
   key      String @unique
   bucket   String
   mimeType String @map("mime_type")
+>>>>>>> main
 
   school School @relation(fields: [schoolId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
+<<<<<<< feat/files-module-ir115-ir116-ir117
+  @@index([schoolId, userId])
+=======
   @@index([schoolId])
+>>>>>>> main
   @@map("uploaded_files")
 }

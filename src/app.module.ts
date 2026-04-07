@@ -14,6 +14,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 // Infrastructure
 import { QueuesModule } from './queues/queues.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { FilesModule } from './modules/files/files.module';
 
 // Feature modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -54,6 +55,7 @@ import { HealthCheckModule } from './modules/health-check/health-check.module';
     }),
     QueuesModule,
     UploadsModule,
+    FilesModule,
     AuthModule,
     UsersModule,
     SchoolsModule,
