@@ -14,6 +14,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
 import { AssignmentsService } from './assignments.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { QueryAssignmentDto } from './dto/query-assignment.dto';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -27,12 +29,8 @@ export class AssignmentsController {
 
   @Get()
   @ApiOperation({ summary: 'List assignments (filter by subjectId or teacherId)' })
-  findAll(
-    @CurrentUser() user: JwtPayload,
-    @Query('subjectId') subjectId?: string,
-    @Query('teacherId') teacherId?: string,
-  ) {
-    return this.service.findAll(user.schoolId!, subjectId, teacherId);
+  findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryAssignmentDto) {
+    return this.service.findAll(user.schoolId!, query.subjectId, query.teacherId);
   }
 
   @Post()
@@ -53,7 +51,7 @@ export class AssignmentsController {
   update(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: Partial<CreateAssignmentDto>,
+    @Body() dto: UpdateAssignmentDto,
   ) {
     return this.service.update(id, user.schoolId!, dto);
   }

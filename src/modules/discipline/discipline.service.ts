@@ -56,7 +56,7 @@ export class DisciplineService {
     await this.findById(caseId, schoolId);
     const existing = await this.repo.findAppeal(caseId);
     if (existing) throw new ConflictException('Appeal already submitted for this case');
-    return this.repo.createAppeal(caseId, dto.reason);
+    return this.repo.createAppeal(caseId, schoolId, dto.reason);
   }
 
   async resolveAppeal(caseId: string, schoolId: string, status: 'APPROVED' | 'REJECTED') {

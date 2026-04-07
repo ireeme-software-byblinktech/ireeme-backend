@@ -81,8 +81,8 @@ export class HealthController {
   @Roles(RoleType.NURSE, RoleType.STUDENT)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Schedule a health appointment' })
-  createAppointment(@Body() dto: CreateAppointmentDto) {
-    return this.service.createAppointment(dto);
+  createAppointment(@CurrentUser() user: JwtPayload, @Body() dto: CreateAppointmentDto) {
+    return this.service.createAppointment(user.schoolId!, dto);
   }
 
   @Get('appointments/student/:studentId')

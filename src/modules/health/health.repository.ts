@@ -63,6 +63,7 @@ export class HealthRepository extends BaseRepository {
   // ── Appointments ───────────────────────────────────────────────────────────
 
   createAppointment(data: {
+    schoolId: string;
     studentId: string;
     nurseId: string;
     scheduledAt: Date;

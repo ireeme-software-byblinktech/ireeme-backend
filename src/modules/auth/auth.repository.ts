@@ -22,9 +22,9 @@ export class AuthRepository extends BaseRepository {
     });
   }
 
-  saveRefreshToken(userId: string, tokenHash: string, expiresAt: Date) {
+  saveRefreshToken(userId: string, schoolId: string | null, tokenHash: string, expiresAt: Date) {
     return this.prisma.refreshToken.create({
-      data: { userId, tokenHash, expiresAt },
+      data: { userId, schoolId, tokenHash, expiresAt },
     });
   }
 

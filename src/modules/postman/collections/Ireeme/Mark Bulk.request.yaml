@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:7000/api/v1/attendance/mark-bulk
+method: POST
+body:
+  type: json
+  content: ""
+order: 1775556045238

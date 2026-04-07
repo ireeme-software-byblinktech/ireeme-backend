@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { TimetableRepository } from './timetable.repository';
 import { CreateSlotDto } from './dto/create-slot.dto';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @Injectable()
 export class TimetableService {

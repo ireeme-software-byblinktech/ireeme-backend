@@ -48,8 +48,9 @@ export class HealthService {
 
   // ── Appointments ───────────────────────────────────────────────────────────
 
-  createAppointment(dto: CreateAppointmentDto) {
+  createAppointment(schoolId: string, dto: CreateAppointmentDto) {
     return this.repo.createAppointment({
+      schoolId,
       studentId: dto.studentId,
       nurseId: dto.nurseId,
       scheduledAt: new Date(dto.scheduledAt),
