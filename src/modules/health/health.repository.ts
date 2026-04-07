@@ -81,6 +81,10 @@ export class HealthRepository extends BaseRepository {
     });
   }
 
+  findAppointmentById(id: string) {
+    return this.prisma.appointment.findUnique({ where: { id } });
+  }
+
   updateAppointmentStatus(id: string, status: AppointmentStatus) {
     return this.prisma.appointment.update({ where: { id }, data: { status } });
   }
