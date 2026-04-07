@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
@@ -33,7 +34,18 @@ export class SubmissionsController {
   @Get(':id')
   @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER, RoleType.STUDENT)
   @ApiOperation({ summary: 'Get submission details' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.submissionsService.findById(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const s = await this.submissionsService.findById(id);
+    if (!s) throw new NotFoundException('Submission not found');
+    return s;
+  }
+
+  @Get(':id/status')
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER, RoleType.STUDENT)
+  @ApiOperation({ summary: 'Get submission status' })
+  async getStatus(@Param('id', ParseUUIDPipe) id: string) {
+    const s = await this.submissionsService.findById(id);
+    if (!s) throw new NotFoundException('Submission not found');
+    return { status: s.status, isLate: s.isLate };
   }
 }
