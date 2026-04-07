@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Delete,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
@@ -50,5 +51,21 @@ export class AcademicTermsController {
     @Body() dto: Partial<CreateTermDto>,
   ) {
     return this.service.update(id, user.schoolId!, dto);
+  }
+
+  @Delete(':id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a term' })
+  remove(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.remove(id, user.schoolId!);
+  }
+
+  @Post(':id/active')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set term as active' })
+  setActive(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.setActive(id, user.schoolId!);
   }
 }

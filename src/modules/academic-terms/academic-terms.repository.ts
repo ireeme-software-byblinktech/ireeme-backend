@@ -48,4 +48,8 @@ export class AcademicTermsRepository extends BaseRepository {
       data: { isActive: false },
     });
   }
+
+  remove(id: string) {
+    return this.prisma.academicTerm.delete({ where: { id } });
+  }
 }
