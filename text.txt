@@ -1,0 +1,864 @@
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+BLINK CAMPUS
+Backend Developer Guide
+Tech Stack • Database Schema • API Modules • Build Order • Rules
+9
+User Portals
+25+
+API Modules
+10
+Build Days
+110+
+Dev Tasks
+NestJS TypeScript PostgreSQL 16 Prisma ORM Redis 7
+BullMQ AWS S3 Socket.io JWT + RBAC Docker
+For Internal Development Team Use Only
+PART 1 — WHAT YOU ARE
+BUILDING
+Overview • System Architecture • User Portals
+What is Blink Campus?
+Blink Campus is a school management platform. You are building the BACKEND ONLY — the API server
+that all 9 types of users (portals) connect to. Each school is fully isolated: a student from
+School A can never see data from School B. This isolation is enforced automatically on every query.
+The 9 User Portals
+Portal User Type Main Capabilities
+Student Enrolled students View grades, submit assignments, check attendance, library, health
+Teacher Class teachers Create assignments, mark grades, record attendance, manage notes
+School Admin School administrator Manage students/teachers, timetable, elections, documents
+Super Admin Platform owner Manage ALL schools and school admins across the entire platform
+Nurse School health officer Health records, appointments, medical cases, medications
+Discipline Discipline officer Cases, scoring, appeals, offense rules, permissions
+Accountant Finance staff Fee records, transactions, stock management, staff salary
+Parent Parents / guardians Monitor child's grades, attendance, health, pay fees
+Librarian School librarian Book catalog, borrowings, returns, library users
+How a Request Flows Through the System
+Client sends
+request
+Rate limiter
+(Redis)
+JWT token
+validated
+Role check
+(RBAC) School scoping
+Controller →
+Service → DB
+Response
+returned
+Every API call passes through all 7 stages in sequence before any data is returned.
+BLINK CAMPUS Backend Developer Guide Page 2
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 2 — TECH STACK
+Every Tool Explained — What It Is and Why
+Tool Category Why This Was Chosen
+NestJS + TypeScript Main Framework Structured Node.js framework. Gives modules, controllers, services, guards, decorators. Like a ve
+PostgreSQL 16 Primary Database All data lives here. Chosen because school data is deeply relational: students belong to classes, g
+Prisma ORM DB Access Layer Write a schema → Prisma generates TypeScript types. Type-safe queries. Better than TypeORM (
+Redis 7 Cache + Queue Store 4 uses: (1) cache API responses, (2) logout token blacklist, (3) rate-limit counters, (4) BullMQ job q
+BullMQ Background Jobs For slow work that should not block the API. Example: after a grade is posted → push job to queue
+AWS S3 File Storage Assignment PDFs, profile photos, documents. Files never stored on app server. Access via short-l
+Socket.io Real-Time WebSocket Live notifications (new grade, message, appointment) and in-app chat. Users join their own room;
+JWT + bcrypt Authentication 2 tokens: access (15 min expiry) and refresh (7 days, httpOnly cookie). Passwords hashed with bc
+BullMQ + Bull Board Job Monitoring Visual dashboard to monitor background job queues — see pending jobs, failures, retries without c
+Winston Logging Structured JSON logs. Every request logs: method, path, status code, response time. Written to fil
+Docker Compose Dev Environment One command starts: NestJS app + PostgreSQL + Redis + pgAdmin. No manual DB installs on de
+Helmet.js + Throttler Security Hardening Helmet sets HTTP security headers. Throttler enforces rate limits per user per endpoint using Red
+class-validator Input Validation Decorators on DTO classes (@IsEmail, @IsUUID, @IsEnum). Global ValidationPipe rejects bad in
+Swagger (@nestjs/swagger) API Documentation Auto-generates interactive API docs at /api/docs from @ApiProperty decorators. Frontend team us
+BLINK CAMPUS Backend Developer Guide Page 3
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 3 — CODE STRUCTURE
+Folder Layout • Module Pattern • The 4-Layer Rule
+The 4-Layer Rule (Never Skip a Layer)
+Layer File What Goes Here What Does NOT Go Here
+Controller assignments.controller.ts URL endpoint definitions (GET /assignments). Calls service. Returns response.Business logic, DB queries, complex calculations
+Service assignments.service.ts ALL business logic. Calculates GPA, checks if submission is late, validates ownership.Direct DB queries (use repository), HTTP response s
+Repository assignments.repository.ts Prisma DB calls ONLY. Always includes schoolId filter.Business rules, calculations, calling external APIs
+DTO dto/create-assignment.dto.ts TypeScript class describing allowed input. class-validator decorators validate automatically.Database types, Prisma models, internal objects
+Root Project Folder Structure
+src/
+nnn common/ ← Shared code (guards, decorators, filters, pipes, utils)
+n nnn decorators/ ← @CurrentUser(), @Roles(), @Public()
+n nnn filters/ ← GlobalExceptionFilter (standard error responses)
+n nnn guards/ ← JwtAuthGuard, RolesGuard, PermissionsGuard
+n nnn middleware/ ← RateLimitMiddleware, TenantMiddleware (injects schoolId)
+nnn config/ ← ConfigModule — reads all .env variables with Joi validation
+nnn database/ ← Prisma schema file, migrations, seed data
+nnn modules/ ← ONE folder per domain feature (see modules below)
+nnn gateways/ ← WebSocket gateways (notifications, chat)
+nnn queues/ ← BullMQ job processors (email, PDF generation, file scan)
+nnn main.ts ← App bootstrap, global pipes, Swagger config
+Example Module Structure (assignments)
+modules/assignments/
+nnn assignments.module.ts ← Wires everything together
+nnn assignments.controller.ts ← HTTP endpoints: GET/POST/PATCH/DELETE
+nnn assignments.service.ts ← Business logic: validate, calculate, decide
+nnn assignments.repository.ts ← Prisma calls (always filtered by schoolId)
+nnn submissions.controller.ts ← Separate controller for /submit endpoint
+nnn submissions.service.ts
+nnn dto/
+n nnn create-assignment.dto.ts ← Validates creation input
+n nnn update-assignment.dto.ts ← Validates update input
+n nnn query-assignment.dto.ts ← Validates query params (filters, pagination)
+nnn __tests__/
+nnn assignments.service.spec.ts ← Unit tests
+nnn assignments.controller.spec.ts ← Integration tests
+BLINK CAMPUS Backend Developer Guide Page 4
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+All 25 Modules to Create
+auth users schools students teachers
+parents classes subjects timetable assignments
+grades attendance notes health discipline
+library finance elections permissions documents
+messages notifications ai reports super-admin
+BLINK CAMPUS Backend Developer Guide Page 5
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 4 — DATABASE SCHEMA
+All Tables • Relationships • Indexing Rules
+Schema — Identity Domain
+Every user in every portal is stored in the users table first, then a role-specific profile table.
+School
+id UUID PK
+name String
+code String UNIQUE
+region String?
+logoUrl String?
+isActive Boolean
+createdAt DateTime
+nn index: (code)
+User
+id UUID PK
+schoolId UUID? FK → School
+email String UNIQUE
+passwordHash String
+firstName String
+lastName String
+avatarUrl String?
+isActive Boolean
+lastLoginAt DateTime?
+createdAt DateTime
+updatedAt DateTime
+nn index: (schoolId, email)
+nn index: (schoolId, isActive)
+UserRole
+id UUID PK
+userId UUID FK → User
+role RoleType ENUM
+enum RoleType {
+STUDENT
+TEACHER
+SCHOOL_ADMIN
+SUPER_ADMIN
+NURSE
+DISCIPLINE_OFFICER
+ACCOUNTANT
+PARENT
+LIBRARIAN
+}
+nn unique: (userId, role)
+Student
+id UUID PK
+userId UUID UNIQUE FK → User
+schoolId UUID FK → School
+studentNumber String
+classId UUID? FK → Class
+dateOfBirth DateTime?
+gender String?
+enrollmentDate DateTime
+isActive Boolean
+nn unique: (schoolId,
+studentNumber)
+nn index: (schoolId, classId)
+Teacher
+id UUID PK
+userId UUID UNIQUE FK → User
+schoolId UUID FK → School
+employeeNum String
+department String?
+qualification String?
+joiningDate DateTime
+isActive Boolean
+nn unique: (schoolId,
+employeeNum)
+nn index: (schoolId)
+Parent
+id UUID PK
+userId UUID UNIQUE FK → User
+schoolId UUID FK → School
+phone String?
+address String?
+ParentStudent (join)
+id UUID PK
+parentId UUID FK → Parent
+studentId UUID FK → Student
+verified Boolean
+nn unique: (parentId, studentId)
+BLINK CAMPUS Backend Developer Guide Page 6
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+Schema — Academic Domain
+Class
+id UUID PK
+schoolId UUID FK → School
+name String
+year Int
+stream String?
+termId UUID FK → AcademicTerm
+nn index: (schoolId)
+Subject
+id UUID PK
+schoolId UUID FK → School
+name String
+code String
+classId UUID? FK → Class
+TeacherSubject (join)
+teacherId UUID FK → Teacher
+subjectId UUID FK → Subject
+nn unique: (teacherId,
+subjectId)
+AcademicTerm
+id UUID PK
+schoolId UUID FK → School
+name String
+startDate DateTime
+endDate DateTime
+isActive Boolean
+TimetableSlot
+classId UUID FK → Class
+subjectId UUID FK → Subject
+teacherId UUID FK → Teacher
+dayOfWeek Int (0-6)
+startTime String
+room String?
+Assignment
+id UUID PK
+schoolId UUID FK → School
+subjectId UUID FK → Subject
+teacherId UUID FK → Teacher
+title String
+description String?
+type AssignmentType
+maxScore Decimal(5,2)
+weight Decimal(4,2)
+dueAt DateTime
+allowLate Boolean
+fileUrls String[]
+createdAt DateTime
+nn index: (schoolId, subjectId,
+dueAt)
+nn index: (schoolId, teacherId)
+enum: HOMEWORK CAT EXAM
+PROJECT QUIZ
+Submission
+id UUID PK
+assignmentId UUID FK →
+Assignment
+studentId UUID FK → Student
+fileUrls String[]
+submittedAt DateTime
+isLate Boolean
+status SubmissionStatus
+enum SubmissionStatus {
+SUBMITTED
+GRADED
+RETURNED
+LATE
+}
+nn unique: (assignmentId,
+studentId)
+nn index: (studentId, status)
+Grade
+id UUID PK
+schoolId UUID FK → School
+submissionId UUID UNIQUE FK
+studentId UUID FK → Student
+subjectId UUID FK → Subject
+teacherId UUID FK → Teacher
+termId UUID FK → AcademicTerm
+score Decimal(6,2)
+maxScore Decimal(6,2)
+feedback String?
+gradedAt DateTime
+appealStatus AppealStatus?
+nn index: (schoolId, studentId,
+termId)
+nn index: (schoolId, subjectId,
+termId)
+enum: PENDING REVIEWING
+APPROVED REJECTED
+BLINK CAMPUS Backend Developer Guide Page 7
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+AttendanceRecord
+id UUID PK
+schoolId UUID FK → School
+studentId UUID FK → Student
+subjectId UUID FK → Subject
+date Date
+status AttendanceStatus
+markedById UUID FK → User
+note String?
+enum AttendanceStatus {
+PRESENT
+ABSENT
+LATE
+EXCUSED
+}
+nn unique: (studentId,
+subjectId, date)
+nn index: (schoolId, date,
+status)
+nn index: (studentId, date)
+HealthRecord / MedicalCase
+HealthRecord:
+id UUID PK
+schoolId UUID FK → School
+studentId UUID FK → Student
+visitDate DateTime
+diagnosis String
+treatment String?
+nurseId UUID FK → User
+MedicalCase:
+id UUID PK
+studentId UUID FK → Student
+diagnosis String
+symptoms String
+openedAt DateTime
+status CaseStatus
+Appointment:
+studentId, nurseId, scheduledAt,
+reason, status (PENDING/CONFIRMED
+/CANCELLED/COMPLETED)
+DisciplineCase / Appeal
+DisciplineCase:
+id UUID PK
+schoolId UUID FK → School
+studentId UUID FK → Student
+officerId UUID FK → User
+offenseType OffenseType
+description String
+pointsDeduct Int
+status CaseStatus
+evidenceUrls String[]
+createdAt DateTime
+DisciplineAppeal:
+caseId UUID FK → DisciplineCase
+reason String
+status AppealStatus
+OffenseType: name, pointDeduction
+nn index: (schoolId, studentId)
+BLINK CAMPUS Backend Developer Guide Page 8
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 4 (continued) — FINANCE,
+LIBRARY & COMMUNICATION
+SCHEMA
+Remaining tables and Entity Relationship Overview
+Finance Tables
+FeeRecord:
+id UUID PK
+schoolId UUID FK → School
+studentId UUID FK → Student
+termId UUID FK → AcademicTerm
+totalFee Decimal(10,2)
+amountPaid Decimal(10,2)
+status PaymentStatus
+Transaction:
+id UUID PK
+feeRecordId UUID FK → FeeRecord
+amount Decimal(10,2)
+method PaymentMethod
+reference String?
+paidAt DateTime
+StockItem: name, quantity, price
+StockSale: itemId, studentId, qty
+nn index: (schoolId, createdAt)
+Library Tables
+LibraryBook:
+id UUID PK
+schoolId UUID FK → School
+title String
+author String
+isbn String?
+genre String?
+totalCopies Int
+available Int
+coverUrl String?
+Borrowing:
+id UUID PK
+bookId UUID FK → LibraryBook
+studentId UUID FK → Student
+borrowedAt DateTime
+dueDate DateTime
+returnedAt DateTime?
+status BorrowStatus
+nn index: (studentId, returnedAt
+IS NULL)
+Communication Tables
+Notification:
+id UUID PK
+userId UUID FK → User
+title String
+body String
+type NotificationType
+isRead Boolean
+createdAt DateTime
+nn index: (userId, isRead)
+Conversation: id, createdAt
+ConversationMember: convId,
+userId
+Message: convId, senderId,
+content,
+isRead, sentAt
+Election: title, status, startAt,
+endAt
+Candidate: electionId, studentId,
+bio
+Vote: candidateId, studentId
+(unique)
+PermissionRequest: studentId,
+reason,
+fromDate, toDate, status,
+approvedBy
+AiConversation + AiMessage
+UploadedFile: key, bucket,
+mimeType
+Entity Relationship Overview
+BLINK CAMPUS Backend Developer Guide Page 9
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+schools nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn ALL tables have schoolId
+n
+nnn users nn< user_roles (9 roles)
+n n
+n nnn students nn< class_students >nn classes
+n n n
+n n nnn< submissions >nn assignments >nn subjects
+n n n n n
+n n n nnn< grades nnn< teacher_subjects >nn teachers
+n n n
+n n nnn< attendance_records (per subject per day)
+n n nnn< discipline_cases nn< discipline_appeals
+n n nnn< health_records, appointments, medical_cases
+n n nnn< borrowings >nn library_books
+n n nnn< fee_records nn< transactions
+n n nnn< votes >nn candidates >nn elections
+n n
+n nnn teachers nn< timetable_slots
+n nnn parents nn< parent_students >nn students
+n
+nnn notifications, messages, ai_conversations, uploaded_files
+Indexing Rules
+Table Index Columns Purpose
+users (schoolId, email) Login lookup
+students (schoolId, classId) Class roster
+assignments (schoolId, subjectId, dueAt) Upcoming assignments
+submissions (studentId, status) Student dashboard
+grades (schoolId, studentId, termId) Report card generation
+attendance_records (schoolId, date, status) Daily attendance summary
+attendance_records (studentId, date) Student history
+notifications (userId, isRead, createdAt) Notification inbox
+transactions (schoolId, createdAt) Financial reporting
+borrowings (studentId, returnedAt IS NULL) Active borrowings
+BLINK CAMPUS Backend Developer Guide Page 10
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 5 — BUILD ORDER (10 DAYS)
+What to build first • Dependencies • Day-by-day plan
+Critical Rule
+Follow this order strictly. Each day depends on the previous. Do not skip ahead.
+Days 1 and 2 are the most critical — everything is blocked until the DB schema and auth are done.
+Day 1
+Project Setup & DB
+Foundation
+→ Create NestJS project
+→ Docker Compose (app +
+DB + Redis)
+→ Prisma: identity tables
+→ Run migration + seed
+data
+→ Error handling + logging
+Day 2
+Authentication
+System
+→ Login/refresh/logout
+endpoints
+→ JWT token generation
+→ Role guards (RBAC)
+→ School isolation
+middleware
+→ BaseRepository class
+Day 3
+Academic Core APIs
+→ Students CRUD
+→ Teachers CRUD
+→ Classes + Subjects
+CRUD
+→ Academic Terms API
+→ Timetable endpoints
+Day 4
+Assignments + File
+Uploads
+→ Assignment CRUD
+(teacher)
+→ AWS S3 upload service
+→ BullMQ queue setup
+→ Submission engine
+(student)
+→ File type validation
+Day 5
+Grades + Attendance
++ Notifications
+→ Grading API + GPA calc
+→ Attendance bulk-mark
+API
+→ Attendance analytics
+→ Notification engine
+→ Event-driven side
+effects
+Day 6
+Operational Portals
+→ Discipline cases +
+appeals
+→ Grade appeals system
+→ Report card aggregation
+→ Health (Nurse) module
+→ Library start
+Day 7
+Finance, Library,
+Parent, Elections
+→ Fee records +
+transactions
+→ Stock management
+→ Library borrowings
+→ Parent portal APIs
+→ Elections + voting
+Day 8
+Real-Time:
+WebSocket + Chat
+→ Student dashboard
+endpoint
+→ Redis caching on
+dashboard
+→ WebSocket gateway
+→ Messaging (chat)
+module
+→ Live notification push
+Day 9
+AI, Super Admin,
+Security
+→ Campus AI chat
+integration
+→ Super Admin CRUD
+→ Rate limiting + Helmet
+→ CORS + security
+headers
+→ Integration tests
+Day 10
+Stabilize + Ship
+→ Fix all failing tests
+→ Performance smoke test
+→ Swagger docs complete
+→ Postman collection
+export
+→ Docker production build
+Hard Dependencies — Do These First or Everything is Blocked
+# Dependency Blocks
+1 NestJS project + Docker must be running (Day 1 morning) Literally every other task
+2 Prisma migration must pass (Day 1 evening) All module database work
+3 Auth endpoints working (Day 2) RBAC guards + school isolation middleware
+4 BaseRepository class created (Day 2 end) All 25 module repositories
+5 Assignment model → Submission model → Grade model (Days 4-5) Grading engine chain
+6 NotificationsService created (Day 5) WebSocket gateway on Day 8
+BLINK CAMPUS Backend Developer Guide Page 11
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 6 — RULES TO FOLLOW
+Architecture • Security • Testing • Naming Conventions
+Architecture Rules
+Always filter by school_id
+Every Prisma query must include where: { schoolId }. Forgetting this
+allows cross-school data leaks.
+Never skip the layer chain
+Controller → Service → Repository. No DB queries in controllers. No
+business logic in repositories.
+Modules talk via Services only
+If Grades needs student data, import StudentService. Never import
+StudentRepository directly.
+All list endpoints must paginate
+Never return an unbounded list. Use cursor or offset pagination.
+Limit: 25-50 items max per page.
+DTOs on all input
+Define DTO class with class-validator decorators. Global
+ValidationPipe rejects bad input with 400.
+Short transactions
+Never call external APIs inside a DB transaction. Keep transactions
+fast and atomic.
+Events for side effects
+Grade posted → emit GradePosted event → NotificationService
+creates notification. Never call notification directly from grades
+service.
+Security Rules
+Never store secrets in code
+API keys, JWT secrets, DB passwords → .env file only. Never
+commit .env to Git.
+Passwords → bcrypt always
+bcrypt.hash(password, 12) on save. bcrypt.compare() on login.
+Never plain text.
+File uploads: validate twice
+Check MIME type AND file magic bytes. Extension alone is not
+enough. Max 10MB.
+Return 404 not 403 for wrong school
+Don't reveal that another school's data exists. Always 404 if not in
+your school.
+Refresh tokens → hashed in DB
+Store bcrypt hash of refresh token, not the token itself. Compare on
+refresh.
+Blacklist logout tokens
+On logout: store the access token JTI in Redis with TTL = remaining
+token lifetime.
+Naming Conventions
+What Convention Example
+Files kebab-case.ts grade-appeal.service.ts
+Classes PascalCase GradeAppealService
+Methods camelCase, verb first findStudentGrades(), markAttendance()
+Constants SCREAMING_SNAKE_CASE JWT_SECRET, MAX_FILE_SIZE
+Enums PascalCase name, UPPER values AttendanceStatus.PRESENT
+DB tables snake_case plural attendance_records, grade_appeals
+DB columns snake_case school_id, created_at, max_score
+API routes kebab-case plural nouns /api/v1/grade-appeals, /api/v1/medical-cases
+Redis keys namespace:id colon-separated roster:schoolId:classId, session:userId
+BullMQ queues kebab-case notification-queue, report-generation
+BLINK CAMPUS Backend Developer Guide Page 12
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+Events PascalCase GradePosted, SubmissionCreated, DisciplineCaseOpened
+Testing Requirements
+When What Tool Pass Threshold
+As you code Unit test each service method Jest (npm test --watch) Happy path + main error case
+Before PR Full test suite locally Jest (npm test) 0 failures before raising PR
+On PR merge CI pipeline runs automatically GitHub Actions Must be green to merge
+Day 5 Full integration test sweep Jest + Supertest All modules passing so far
+Day 9 Security + integration run Jest + manual verify RBAC rejection, schoolId isolation
+Day 10 Performance smoke test k6 or Artillery 100 concurrent users, no errors
+Definition of Done — A Task is Done When:
+3 Code written and matches the task description exactly
+3 No TypeScript errors (npx tsc --noEmit passes with
+zero errors)
+3 ESLint passes with zero warnings on all changed files
+3 At least one unit test written for any new service
+method
+3 Integration test covers: success response + 401 (no
+token) + 403 (wrong role) + 400 (bad data)
+3 Pull Request raised with clear description, linked to the
+Jira task
+3 Code reviewed and approved by at least one other
+developer
+3 PR merged to develop branch — GitHub Actions CI
+shows green
+3 Swagger documented: @ApiProperty on all DTO
+fields, endpoint shows in /api/docs
+3 Jira task moved to Done status
+BLINK CAMPUS Backend Developer Guide Page 13
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 7 — KEY API ENDPOINTS
+REFERENCE
+Core endpoints per module — full Swagger docs at /api/docs
+Module Method Endpoint Who Can Call What It Does
+Auth POST /auth/login Public Login → returns accessToken + sets refresh cookie
+Auth POST /auth/refresh Public Rotate refresh token → new accessToken
+Auth POST /auth/logout Any logged-in Blacklist token in Redis + clear cookie
+Auth GET /auth/me Any logged-in Returns current user profile from JWT
+Students GET /students Admin Paginated student list (schoolId scoped)
+Students POST /students Admin Create student + user account (atomic transaction)
+Students GET /students/:id Admin, Teacher Full student profile (404 if wrong school)
+Students PATCH /students/:id Admin Update student profile fields
+Students GET /students/:id/dashboard Student Aggregated dashboard (Redis cached 5 min)
+Assignments GET /assignments Teacher, Student List assignments filtered by subject/class/status
+Assignments POST /assignments Teacher Create assignment (dueAt must be future)
+Assignments PATCH /assignments/:id Teacher (owner) Update title/desc/dueAt/maxScore
+Assignments POST /assignments/:id/submit Student Upload files + create/update submission
+Grades PATCH /submissions/:id/grade Teacher Post score + feedback → triggers notification
+Grades GET /grades/student/:id/:termId Student, Parent, AdminAll grades + calculated GPA for term
+Grades POST /grades/:id/appeal Student Submit grade appeal with reason
+Grades PATCH /grades/:id/appeal/:status Teacher Approve or reject appeal with written reason
+Attendance POST /attendance/mark-bulk Teacher Mark attendance for whole class on a date (upsert)
+Attendance GET /attendance/student/:id Student, Parent, TeacherPaginated attendance history with filters
+Attendance GET /attendance/summary/:id/:termId All roles Attendance % by subject for a student/term
+Health POST /health/records Nurse Create health record for a student visit
+Health GET /health/records/student/:id Nurse, Student (own), Parent (child)Full health history
+Health POST /health/appointments Nurse, Student Schedule health appointment
+Discipline POST /discipline/cases Discipline Officer Log case: offense + description + evidence files
+Discipline PATCH /discipline/cases/:id/close Discipline Officer Mark case as resolved
+Discipline POST /discipline/cases/:id/appeal Student Submit appeal for a discipline case
+Finance POST /finance/payments Accountant Record fee payment for a student
+Finance GET /finance/students/:id/balance Accountant, Parent Outstanding balance for student
+Finance GET /finance/transactions Accountant Paginated transactions with date + student filters
+BLINK CAMPUS Backend Developer Guide Page 14
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+Library GET /library/books All roles Search book catalog (title, author, ISBN, genre)
+Library POST /library/borrowings Librarian Record new book borrowing + decrement available count
+Library PATCH /library/borrowings/:id/return Librarian Mark returned + increment available count
+Notifications GET /notifications Any logged-in Paginated notification inbox
+Notifications PATCH /notifications/read-all Any logged-in Mark all notifications as read
+Messages GET /messages/conversations Any logged-in List conversations with unread counts
+Messages POST /messages Any logged-in Send message → WS emit to recipient room
+AI POST /ai/chat Student Send message to Campus AI (50/day rate limit)
+Elections POST /elections/:id/vote Student Cast vote (unique per student per position)
+Reports GET /report-cards/:studentId/:termId Admin, Teacher, ParentReport card data → triggers PDF generation job
+Health GET /api/v1/health Public System health check: DB + Redis connectivity
+BLINK CAMPUS Backend Developer Guide Page 15
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 8 — CACHING, SECURITY &
+PERFORMANCE
+Redis strategy • Rate limits • Security headers • What gets cached
+Redis Caching Strategy
+Data Cache Key Pattern TTL When Invalidated
+Student dashboard dashboard:{schoolId}:{studentId} 5 min GradePosted or AssignmentCreated event
+Class roster roster:{schoolId}:{classId} 60 min Student enrolled or removed from class
+Weekly timetable timetable:{schoolId}:{classId} 24 hrs Timetable slot created/updated
+School settings school:settings:{schoolId} 24 hrs Admin updates school config
+Subject list subjects:{schoolId} 6 hrs Subject added or removed
+User profile user:profile:{userId} 30 min Profile updated
+JWT blacklist blacklist:{jti} Token remaining TTLAutomatic (TTL expiry)
+Rate limit counters rl:{userId}:{endpoint} Rolling windowSliding window expiry
+Rate Limiting Rules
+Endpoint Limit Window On Breach
+POST /auth/login 10 attempts 15 min per IP 15-min IP lockout → 429 Too Many Requests
+POST /auth/refresh 30 requests 1 hour per user 429 → wait for window reset
+POST /assignments/:id/submit 20 uploads 1 hour per student 429 → wait for window reset
+POST /ai/chat 50 messages Per day per student429 → message shown to student
+GET /report-cards/* 10 requests 1 hour per user 429 → PDF generation is CPU-heavy
+POST /files/upload 50 uploads 1 hour per user 429 → wait for window reset
+All other endpoints 300 requests 1 min per user 429 → wait 60 seconds
+BLINK CAMPUS Backend Developer Guide Page 16
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+Security Headers (Helmet.js)
+X-Frame-Options: DENY
+Prevents clickjacking
+X-Content-Type-Options: nosniff
+Prevents MIME sniffing
+Strict-Transport-Security
+Forces HTTPS for 1 year
+X-XSS-Protection: 1; mode=block
+Basic XSS filter
+Referrer-Policy: same-origin
+Limits referrer leakage
+Content-Security-Policy
+default-src 'self'
+Attack Prevention Summary
+SQL Injection
+Structurally impossible — Prisma uses parameterized queries. Raw
+queries use tagged template literals.
+XSS
+API is JSON-only. No HTML rendered server-side. All file content stored
+in S3 with Content-Disposition: attachment.
+CSRF
+Access tokens are Bearer (not cookies). Refresh cookie uses
+SameSite=Strict + custom header check.
+Brute Force
+10 failed logins → 15-min Redis lockout. 20 failures in 1hr →
+admin-unlock required.
+Path Traversal
+All uploaded files renamed to UUIDv4. Original filename never used in
+storage path.
+Unauthorized Access
+school_id on every query. Wrong school = 404. Wrong role = 403. No
+token = 401.
+BLINK CAMPUS Backend Developer Guide Page 17
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+PART 9 — BACKGROUND JOBS,
+WEBSOCKET & DELIVERY
+CHECKLIST
+BullMQ Queues • WebSocket Rooms • Sprint MVP vs Future
+BullMQ Background Queues
+Queue Name Jobs It Runs Priority
+notifications Email alerts, push notifications, in-app alertsHigh
+reports Generate PDF report cards, export financial reportsNormal
+file-processing Virus scan uploads, compress images, extract metadataNormal
+emails Welcome emails, password reset, fee invoicesNormal
+ai-chat Async AI response when response is slow Low
+cleanup Delete expired sessions, archive old recordsLow
+How a queue job works:
+// 1. Event fires in grades service
+this.eventEmitter.emit('grade.posted', {
+studentId, gradeId, score
+});
+// 2. EventEmitter listener catches it
+// and adds a job to the queue
+await this.notifQueue.add('send-notification', {
+userId: studentId,
+title: 'Grade Posted',
+body: `You got ${score}`,
+});
+// 3. BullMQ worker processes it
+// (separate processor file)
+async process(job) {
+await this.notifService.create(job.data);
+await this.wsGateway.emit(job.data);
+}
+WebSocket Gateway Rooms
+Room Pattern Who Joins It Events Emitted To It
+user:{userId} Each logged-in user notification.new, message.received
+school:{schoolId} All users of a school announcement, election.update
+class:{classId} Students in a class assignment.created, attendance.mark
+WebSocket connection flow:
+// Client connects with JWT
+socket.connect({ auth: { token } });
+// Server validates on connection
+handleConnection(client) {
+const user = this.jwtService
+.verify(client.handshake.auth.token);
+client.join(`user:${user.sub}`);
+client.join(`school:${user.schoolId}`);
+}
+// Server pushes notification
+this.gateway.server
+.to(`user:${userId}`)
+.emit('notification.new', payload);
+MVP (Day 10) vs Future Sprints
+Feature Day 10 Status Notes
+JWT Auth + RBAC + Multi-tenancy DONE Core foundation
+BLINK CAMPUS Backend Developer Guide Page 18
+Blink Campus © 2025 — Confidential — Internal Use Only NestJS + PostgreSQL + Redis + Prisma
+All 25 API modules with CRUD DONE Full portal coverage
+Assignment submission engine + S3 DONE Including file validation
+Grading engine + GPA calculation DONE Per student per term
+Attendance bulk-mark + analytics DONE With percentage summaries
+WebSocket notifications + chat DONE Redis adapter for scale
+Discipline, Health, Library, Finance DONE All portal APIs functional
+Security hardening (Helmet, rate limit) DONE Production-safe
+Swagger docs + Postman collection DONE Frontend team handoff ready
+PDF report card (full generation) STUB → Sprint 2 Placeholder queued, @pdf-lib Sprint 2
+Email notifications (SMTP) STUB → Sprint 2 BullMQ queue ready, templates Sprint 2
+Push notifications (FCM/APNs) Not started → Sprint 3 Needs mobile device tokens
+Antivirus scan (ClamAV) STUB → Sprint 2 Queue exists, ClamAV setup Sprint 2
+Advanced analytics + BI charts Not started → Sprint 3 Aggregation queries for admin
+GDPR compliance + audit logs Not started → Sprint 4 Data export + right to erasure
