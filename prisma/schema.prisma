@@ -471,6 +471,7 @@ model Submission {
   schoolId     String           @map("school_id")
   assignmentId String           @map("assignment_id")
   studentId    String           @map("student_id")
+  content      String?          @db.Text
   fileUrls     String[]         @map("file_urls")
   submittedAt  DateTime         @default(now()) @map("submitted_at")
   isLate       Boolean          @default(false) @map("is_late")
