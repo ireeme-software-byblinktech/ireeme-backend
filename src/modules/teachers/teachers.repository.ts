@@ -8,6 +8,12 @@ export class TeachersRepository extends BaseRepository {
     super(prisma);
   }
 
+  findByUserId(userId: string, schoolId: string) {
+    return this.prisma.teacher.findFirst({
+      where: this.scopeToSchool(schoolId, { userId }),
+    });
+  }
+
   findAll(schoolId: string, page = 1, limit = 25) {
     const where = this.scopeToSchool(schoolId);
     return this.prisma.teacher.findMany({
