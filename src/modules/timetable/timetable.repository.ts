@@ -28,6 +28,7 @@ export class TimetableRepository extends BaseRepository {
   }
 
   create(data: {
+    schoolId: string;
     classId: string;
     subjectId: string;
     teacherId: string;

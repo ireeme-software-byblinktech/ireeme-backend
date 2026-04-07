@@ -14,6 +14,8 @@ import { RoleType } from '@prisma/client';
 import { TimetableService } from './timetable.service';
 import { CreateSlotDto } from './dto/create-slot.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('timetable')
 @ApiBearerAuth()
@@ -36,8 +38,8 @@ export class TimetableController {
   @Post()
   @Roles(RoleType.SCHOOL_ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateSlotDto) {
-    return this.service.create(dto);
+  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateSlotDto) {
+    return this.service.create(user.schoolId!, dto);
   }
 
   @Delete(':id')

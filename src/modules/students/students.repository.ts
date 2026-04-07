@@ -33,7 +33,7 @@ export class StudentsRepository extends BaseRepository {
         take: limit,
         include: {
           user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
-          class: { select: { name: true } },
+          classes: { include: { class: { select: { name: true } } } },
         },
         orderBy: { user: { lastName: 'asc' } },
       }),
@@ -57,7 +57,7 @@ export class StudentsRepository extends BaseRepository {
             lastLoginAt: true,
           },
         },
-        class: true,
+        classes: { include: { class: { select: { name: true, year: true } } } },
         parentLinks: {
           include: {
             parent: {
@@ -79,7 +79,6 @@ export class StudentsRepository extends BaseRepository {
     userId: string;
     schoolId: string;
     studentNumber: string;
-    classId?: string;
     dateOfBirth?: Date;
     gender?: string;
   }) {
@@ -93,7 +92,6 @@ export class StudentsRepository extends BaseRepository {
     id: string,
     schoolId: string,
     data: Partial<{
-      classId: string;
       dateOfBirth: Date;
       gender: string;
       isActive: boolean;
@@ -129,13 +127,13 @@ export class StudentsRepository extends BaseRepository {
               await this.prisma.subject.findMany({
                 where: {
                   schoolId,
-                  classId:
-                    (
-                      await this.prisma.student.findUnique({
-                        where: { id: studentId },
-                        select: { classId: true },
-                      })
-                    )?.classId ?? undefined,
+                  classId: (
+                    await this.prisma.classStudent.findFirst({
+                      where: { studentId },
+                      select: { classId: true },
+                      orderBy: { enrolledAt: 'desc' },
+                    })
+                  )?.classId ?? undefined,
                 },
                 select: { id: true },
               })

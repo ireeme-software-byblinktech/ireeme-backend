@@ -11,7 +11,7 @@ export class ClassesRepository extends BaseRepository {
   findAll(schoolId: string) {
     return this.prisma.class.findMany({
       where: this.scopeToSchool(schoolId),
-      include: { term: { select: { name: true } }, _count: { select: { students: true } } },
+      include: { term: { select: { name: true } }, _count: { select: { classStudents: true } } },
     });
   }
 
@@ -19,7 +19,9 @@ export class ClassesRepository extends BaseRepository {
     return this.prisma.class.findFirst({
       where: this.scopeToSchool(schoolId, { id }),
       include: {
-        students: { include: { user: { select: { firstName: true, lastName: true } } } },
+        classStudents: {
+          include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } },
+        },
         subjects: true,
         timetableSlots: {
           include: {

@@ -56,10 +56,10 @@ export class TeachersRepository extends BaseRepository {
     return this.prisma.teacher.update({ where: { id }, data });
   }
 
-  assignSubject(teacherId: string, subjectId: string) {
+  assignSubject(teacherId: string, subjectId: string, schoolId: string) {
     return this.prisma.teacherSubject.upsert({
       where: { teacherId_subjectId: { teacherId, subjectId } },
-      create: { teacherId, subjectId },
+      create: { teacherId, subjectId, schoolId },
       update: {},
     });
   }

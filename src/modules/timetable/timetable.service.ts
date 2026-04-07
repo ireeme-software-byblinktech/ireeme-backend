@@ -12,8 +12,8 @@ export class TimetableService {
   findByTeacher(teacherId: string) {
     return this.repo.findByTeacher(teacherId);
   }
-  create(dto: CreateSlotDto) {
-    return this.repo.create(dto);
+  create(schoolId: string, dto: CreateSlotDto) {
+    return this.repo.create({ schoolId, ...dto });
   }
   delete(id: string) {
     return this.repo.delete(id);
