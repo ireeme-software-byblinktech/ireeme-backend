@@ -5,11 +5,14 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 
+import { SubmissionsService } from '../submissions/submissions.service';
+
 @Injectable()
 export class AssignmentsService {
   constructor(
     private readonly repo: AssignmentsRepository,
     private readonly events: EventEmitter2,
+    private readonly submissionsService: SubmissionsService,
   ) {}
 
   findAll(schoolId: string, subjectId?: string, teacherId?: string) {
@@ -47,28 +50,14 @@ export class AssignmentsService {
 
   async submit(
     assignmentId: string,
-    studentId: string,
+    userId: string,
     schoolId: string,
     dto: SubmitAssignmentDto,
   ) {
-    const assignment = await this.findById(assignmentId, schoolId);
-    const now = new Date();
-    if (now > assignment.dueAt && !assignment.allowLate) {
-      throw new BadRequestException('Submission deadline has passed');
-    }
-    const submission = await this.repo.upsertSubmission(
+    return this.submissionsService.submit(userId, schoolId, {
       assignmentId,
-      studentId,
-      schoolId,
-      dto.fileUrls,
-      now > assignment.dueAt,
-    );
-    this.events.emit('submission.created', {
-      studentId,
-      assignmentId,
-      submissionId: submission.id,
+      ...dto,
     });
-    return submission;
   }
 
   /** Exposed for GradesService — keeps layer chain clean */
