@@ -47,13 +47,13 @@ export class AttendanceController {
   @Get('summary/:studentId')
   @Roles(RoleType.STUDENT, RoleType.PARENT, RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Attendance % by subject for a student in a date range' })
-  getSummary(
+  calculateSummary(
     @CurrentUser() user: JwtPayload,
     @Param('studentId', ParseUUIDPipe) studentId: string,
     @Query('from') from: string,
     @Query('to') to: string,
   ) {
-    return this.service.getSummary(studentId, user.schoolId!, from, to);
+    return this.service.calculateSummary(studentId, user.schoolId!, from, to);
   }
 
   @Get('daily-summary')
@@ -67,3 +67,4 @@ export class AttendanceController {
     return this.service.getDailySummary(user.schoolId!, date, classId);
   }
 }
+
