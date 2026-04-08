@@ -1,8 +1,11 @@
 import { Controller, Get, Patch, Post, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { RoleType } from '@prisma/client';
+import { RoleType, AppealStatus } from '@prisma/client';
 import { GradesService } from './grades.service';
+import { AppealsService } from './appeals.service';
 import { GradeSubmissionDto, AppealDto, ResolveAppealDto } from './dto/grade-submission.dto';
+import { SubmitAppealDto } from './dto/submit-appeal.dto';
+import { ReviewAppealDto } from './dto/review-appeal.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -11,7 +14,10 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth()
 @Controller('grades')
 export class GradesController {
-  constructor(private readonly service: GradesService) {}
+  constructor(
+    private readonly service: GradesService,
+    private readonly appealsService: AppealsService,
+  ) { }
 
   @Patch('submissions/:submissionId/grade')
   @Roles(RoleType.TEACHER)
@@ -40,14 +46,33 @@ export class GradesController {
   @Post(':id/appeal')
   @Roles(RoleType.STUDENT)
   @ApiOperation({ summary: 'Submit grade appeal' })
-  appeal(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AppealDto) {
-    return this.service.submitAppeal(id, dto);
+  submitAppeal(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) gradeId: string,
+    @Body() dto: SubmitAppealDto,
+  ) {
+    return this.appealsService.submit(user.sub, gradeId, dto.reason, user.schoolId!);
   }
 
-  @Patch(':id/appeal/:status')
+  @Patch('appeals/:appealId')
   @Roles(RoleType.TEACHER)
-  @ApiOperation({ summary: 'Approve or reject appeal' })
-  resolveAppeal(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ResolveAppealDto) {
-    return this.service.resolveAppeal(id, dto);
+  @ApiOperation({ summary: 'Review grade appeal (REVIEWING, APPROVED, REJECTED)' })
+  reviewAppeal(
+    @CurrentUser() user: JwtPayload,
+    @Param('appealId', ParseUUIDPipe) appealId: string,
+    @Body() dto: ReviewAppealDto,
+  ) {
+    return this.appealsService.reviewAppeal(appealId, dto.status, user.sub, user.schoolId!);
+  }
+
+  @Get('appeals')
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER)
+  @ApiOperation({ summary: 'List all grade appeals (paginated, max 50 per page)' })
+  listAppeals(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page = 1,
+    @Query('limit') limit = 50,
+  ) {
+    return this.appealsService.findAll(user.schoolId!, +page, +limit);
   }
 }

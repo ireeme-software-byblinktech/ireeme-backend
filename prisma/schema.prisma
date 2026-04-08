@@ -158,6 +158,7 @@ model School {
   PermissionRequest  PermissionRequest[]
   AiConversation     AiConversation[]
   AiMessage          AiMessage[]
+  GradeAppeal        GradeAppeal[]
 
   @@index([code])
   @@map("schools")
@@ -188,18 +189,11 @@ model User {
   sentMessages     Message[]            @relation("SentMessages")
   conversations    ConversationMember[]
   aiConversations  AiConversation[]
-<<<<<<< feat/files-module-ir115-ir116-ir117
-  attendanceMarked AttendanceRecord[] @relation("MarkedBy")
-  healthVisits     HealthRecord[]    @relation("NurseVisits")
-  disciplineCases  DisciplineCase[]  @relation("OfficerCases")
-  appointments     Appointment[]     @relation("NurseAppointments")
-  uploadedFiles    UploadedFile[]
-=======
   attendanceMarked AttendanceRecord[]   @relation("MarkedBy")
   healthVisits     HealthRecord[]       @relation("NurseVisits")
   disciplineCases  DisciplineCase[]     @relation("OfficerCases")
   appointments     Appointment[]        @relation("NurseAppointments")
->>>>>>> main
+  uploadedFiles    UploadedFile[]
 
   @@index([schoolId, email])
   @@index([schoolId, isActive])
@@ -263,6 +257,7 @@ model Student {
   votes           Vote[]
   permissionReqs  PermissionRequest[]
   stockSales      StockSale[]
+  gradeAppeals    GradeAppeal[]
 
   @@unique([schoolId, studentNumber])
   @@index([schoolId, classId])
@@ -516,10 +511,29 @@ model Grade {
   subject    Subject      @relation(fields: [subjectId], references: [id])
   teacher    Teacher      @relation(fields: [teacherId], references: [id])
   term       AcademicTerm @relation(fields: [termId], references: [id])
+  appeal     GradeAppeal?
 
   @@index([schoolId, studentId, termId])
   @@index([schoolId, subjectId, termId])
   @@map("grades")
+}
+
+model GradeAppeal {
+  id        String       @id @default(uuid())
+  gradeId   String       @unique @map("grade_id")
+  studentId String       @map("student_id")
+  schoolId  String       @map("school_id")
+  reason    String
+  status    AppealStatus @default(PENDING)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  grade   Grade   @relation(fields: [gradeId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+  school  School  @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, studentId])
+  @@map("grade_appeals")
 }
 
 model AttendanceRecord {
@@ -924,30 +938,18 @@ model AiMessage {
 // ─── FILES DOMAIN ────────────────────────────────────────────────────────────
 
 model UploadedFile {
-<<<<<<< feat/files-module-ir115-ir116-ir117
-  id         String  @id @default(uuid())
+  id         String @id @default(uuid())
   schoolId   String
   userId     String
-  key        String  @unique
+  key        String @unique
   bucket     String
   mimeType   String
   sizeBytes  Int
-  scanStatus String  @default("PENDING") // PENDING | CLEAN | INFECTED
-=======
-  id       String @id @default(uuid())
-  schoolId String @map("school_id")
-  key      String @unique
-  bucket   String
-  mimeType String @map("mime_type")
->>>>>>> main
+  scanStatus String @default("PENDING") // PENDING | CLEAN | INFECTED
 
   school School @relation(fields: [schoolId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
 
-<<<<<<< feat/files-module-ir115-ir116-ir117
   @@index([schoolId, userId])
-=======
-  @@index([schoolId])
->>>>>>> main
   @@map("uploaded_files")
 }

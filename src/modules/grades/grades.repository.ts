@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BaseRepository } from '../../database/base.repository';
+import { AppealStatus } from '@prisma/client';
 
 @Injectable()
 export class GradesRepository extends BaseRepository {
@@ -43,7 +44,7 @@ export class GradesRepository extends BaseRepository {
     return this.prisma.grade.findUnique({ where: { id } });
   }
 
-  updateAppeal(id: string, appealStatus: any) {
+  updateAppeal(id: string, appealStatus: AppealStatus) {
     return this.prisma.grade.update({ where: { id }, data: { appealStatus } });
   }
 
