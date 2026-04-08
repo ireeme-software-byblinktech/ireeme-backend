@@ -7,6 +7,10 @@ export class GradeSubmissionDto {
   @ApiProperty() @IsUUID() termId: string;
 }
 
+export class CreateGradeDto extends GradeSubmissionDto {
+  @ApiProperty() @IsUUID() submissionId: string;
+}
+
 export class AppealDto {
   @ApiProperty() @IsString() reason: string;
 }
