@@ -25,10 +25,18 @@ export class AssignmentsService {
     return a;
   }
 
-  create(schoolId: string, teacherId: string, dto: CreateAssignmentDto) {
+  async create(schoolId: string, teacherId: string, dto: CreateAssignmentDto) {
     const dueAt = new Date(dto.dueAt);
     if (dueAt <= new Date()) throw new BadRequestException('dueAt must be in the future');
-    return this.repo.create({ schoolId, teacherId, ...dto, dueAt });
+    const assignment = await this.repo.create({ schoolId, teacherId, ...dto, dueAt });
+
+    this.events.emit('assignment.created', {
+      assignmentId: assignment.id,
+      schoolId,
+      subjectId: dto.subjectId,
+    });
+
+    return assignment;
   }
 
   async update(id: string, schoolId: string, dto: UpdateAssignmentDto) {
