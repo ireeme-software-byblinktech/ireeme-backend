@@ -33,11 +33,7 @@ export class StudentsRepository extends BaseRepository {
         take: limit,
         include: {
           user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
-<<<<<<< feat/files-module-ir115-ir116-ir117
-          classes: { include: { class: { select: { name: true } } } },
-=======
           classes: { select: { class: { select: { name: true } } } },
->>>>>>> main
         },
         orderBy: { user: { lastName: 'asc' } },
       }),
@@ -61,11 +57,7 @@ export class StudentsRepository extends BaseRepository {
             lastLoginAt: true,
           },
         },
-<<<<<<< feat/files-module-ir115-ir116-ir117
-        classes: { include: { class: { select: { name: true, year: true } } } },
-=======
         classes: { include: { class: true } },
->>>>>>> main
         parentLinks: {
           include: {
             parent: {

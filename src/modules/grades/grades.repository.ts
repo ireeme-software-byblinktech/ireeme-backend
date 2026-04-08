@@ -22,7 +22,12 @@ export class GradesRepository extends BaseRepository {
     return this.prisma.grade.upsert({
       where: { submissionId: data.submissionId },
       create: data,
-      update: { score: data.score, feedback: data.feedback, gradedAt: new Date() },
+      update: {
+        score: data.score,
+        feedback: data.feedback,
+        gradedAt: new Date(),
+        teacherId: data.teacherId,
+      },
     });
   }
 
@@ -39,15 +44,27 @@ export class GradesRepository extends BaseRepository {
     });
   }
 
-  findById(id: string) {
-    return this.prisma.grade.findUnique({ where: { id } });
+  findById(id: string, schoolId: string) {
+    return this.prisma.grade.findFirst({
+      where: { id, schoolId },
+      include: {
+        submission: { include: { assignment: true } },
+        student: { include: { user: true } },
+      },
+    });
   }
 
-  updateAppeal(id: string, appealStatus: any) {
-    return this.prisma.grade.update({ where: { id }, data: { appealStatus } });
+  updateAppeal(id: string, schoolId: string, appealStatus: any) {
+    return this.prisma.grade.updateMany({
+      where: { id, schoolId },
+      data: { appealStatus },
+    });
   }
 
-  updateSubmissionStatus(submissionId: string, status: any) {
-    return this.prisma.submission.update({ where: { id: submissionId }, data: { status } });
+  updateSubmissionStatus(submissionId: string, schoolId: string, status: any) {
+    return this.prisma.submission.updateMany({
+      where: { id: submissionId, schoolId },
+      data: { status },
+    });
   }
 }
