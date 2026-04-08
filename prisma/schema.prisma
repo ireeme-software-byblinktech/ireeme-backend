@@ -918,13 +918,13 @@ model AiMessage {
 
 model UploadedFile {
   id         String  @id @default(uuid())
-  schoolId   String
-  userId     String
+  schoolId   String  @map("school_id")
+  userId     String  @map("user_id")
   key        String  @unique
   bucket     String
-  mimeType   String
-  sizeBytes  Int
-  scanStatus String  @default("PENDING") // PENDING | CLEAN | INFECTED
+  mimeType   String  @map("mime_type")
+  sizeBytes  Int     @map("size_bytes")
+  scanStatus String  @default("PENDING") @map("scan_status") // PENDING | CLEAN | INFECTED
 
   school School @relation(fields: [schoolId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
