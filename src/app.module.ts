@@ -38,6 +38,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LibraryModule } from './modules/library/library.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
+import { FinanceModule } from './modules/finance/finance.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { HealthCheckModule } from './modules/health-check/health-check.module';
     LibraryModule,
     ReportsModule,
     HealthCheckModule,
+    FinanceModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, NotificationsListener],
 })
