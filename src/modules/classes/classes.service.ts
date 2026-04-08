@@ -24,4 +24,20 @@ export class ClassesService {
     await this.findById(id, schoolId);
     return this.classesRepo.update(id, dto);
   }
+
+  async remove(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.classesRepo.remove(id);
+  }
+
+  async addStudent(classId: string, schoolId: string, studentId: string) {
+    await this.findById(classId, schoolId);
+    // Student validation could be added here if needed
+    return this.classesRepo.addStudent(classId, studentId, schoolId);
+  }
+
+  async removeStudent(classId: string, schoolId: string, studentId: string) {
+    await this.findById(classId, schoolId);
+    return this.classesRepo.removeStudent(classId, studentId);
+  }
 }

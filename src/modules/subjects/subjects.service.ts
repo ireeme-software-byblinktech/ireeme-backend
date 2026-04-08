@@ -24,4 +24,20 @@ export class SubjectsService {
     await this.findById(id, schoolId);
     return this.repo.update(id, dto);
   }
+
+  async remove(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.repo.remove(id);
+  }
+
+  async assignTeacher(subjectId: string, schoolId: string, teacherId: string) {
+    await this.findById(subjectId, schoolId);
+    // Teacher validation could be added here if needed
+    return this.repo.assignTeacher(subjectId, teacherId, schoolId);
+  }
+
+  async removeTeacher(subjectId: string, schoolId: string, teacherId: string) {
+    await this.findById(subjectId, schoolId);
+    return this.repo.removeTeacher(subjectId, teacherId);
+  }
 }

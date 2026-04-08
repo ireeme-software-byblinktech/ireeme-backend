@@ -23,6 +23,16 @@ export class DisciplineService {
     return this.repo.createOffenseType({ schoolId, ...dto });
   }
 
+  async updateOffenseType(id: string, schoolId: string, dto: Partial<CreateOffenseTypeDto>) {
+    await this.repo.findOffenseTypeById(id, schoolId);
+    return this.repo.updateOffenseType(id, dto);
+  }
+
+  async deleteOffenseType(id: string, schoolId: string) {
+    await this.repo.findOffenseTypeById(id, schoolId);
+    return this.repo.removeOffenseType(id);
+  }
+
   // ── Cases ──────────────────────────────────────────────────────────────────
 
   findAll(schoolId: string, query: QueryCasesDto) {
@@ -36,13 +46,35 @@ export class DisciplineService {
   }
 
   async create(schoolId: string, officerId: string, dto: CreateCaseDto) {
-    const disciplineCase = await this.repo.create({ schoolId, officerId, ...dto });
+    let pointsDeduct = dto.pointsDeduct;
+    if (pointsDeduct === undefined || pointsDeduct === null) {
+      const offenseType = await this.repo.findOffenseTypeById(dto.offenseTypeId, schoolId);
+      if (!offenseType) throw new NotFoundException('Offense type not found');
+      pointsDeduct = offenseType.pointDeduction;
+    }
+
+    const disciplineCase = await this.repo.create({
+      schoolId,
+      officerId,
+      ...dto,
+      pointsDeduct,
+    });
+
     this.events.emit('discipline.case.opened', {
       studentId: dto.studentId,
       schoolId,
       caseId: disciplineCase.id,
     });
     return disciplineCase;
+  }
+
+  async calculateScore(studentId: string, schoolId: string) {
+    return this.repo.calculateScore(studentId, schoolId);
+  }
+
+  async deleteCase(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.repo.removeCase(id);
   }
 
   async close(id: string, schoolId: string) {
