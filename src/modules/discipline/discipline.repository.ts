@@ -15,8 +15,20 @@ export class DisciplineRepository extends BaseRepository {
     return this.prisma.offenseType.findMany({ where: { schoolId } });
   }
 
+  findOffenseTypeById(id: string, schoolId: string) {
+    return this.prisma.offenseType.findFirst({ where: { id, schoolId } });
+  }
+
   createOffenseType(data: { schoolId: string; name: string; pointDeduction: number }) {
     return this.prisma.offenseType.create({ data });
+  }
+
+  updateOffenseType(id: string, data: Partial<{ name: string; pointDeduction: number }>) {
+    return this.prisma.offenseType.update({ where: { id }, data });
+  }
+
+  removeOffenseType(id: string) {
+    return this.prisma.offenseType.delete({ where: { id } });
   }
 
   // ── Cases ──────────────────────────────────────────────────────────────────
@@ -80,10 +92,30 @@ export class DisciplineRepository extends BaseRepository {
     return this.prisma.disciplineCase.update({ where: { id }, data: { status } });
   }
 
+  removeCase(id: string) {
+    return this.prisma.disciplineCase.delete({ where: { id } });
+  }
+
+  async calculateScore(studentId: string, schoolId: string) {
+    const result = await this.prisma.disciplineCase.aggregate({
+      where: {
+        studentId,
+        schoolId,
+        appeal: {
+          isNot: { status: 'APPROVED' },
+        },
+      },
+      _sum: {
+        pointsDeduct: true,
+      },
+    });
+    return result._sum.pointsDeduct || 0;
+  }
+
   // ── Appeals ────────────────────────────────────────────────────────────────
 
-  createAppeal(caseId: string, reason: string) {
-    return this.prisma.disciplineAppeal.create({ data: { caseId, reason } });
+  createAppeal(caseId: string, schoolId: string, reason: string) {
+    return this.prisma.disciplineAppeal.create({ data: { caseId, schoolId, reason } });
   }
 
   findAppeal(caseId: string) {

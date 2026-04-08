@@ -9,15 +9,18 @@ import { winstonConfig } from './config/winston.config';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/logging.interceptor';
 
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(winstonConfig),
-    // Suppress NestJS bootstrap logs — Winston handles them
     bufferLogs: true,
   });
 
-  // Use the Winston logger instance from the DI container so filters/interceptors
-  // receive the same logger rather than a standalone instance.
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
+
   const winstonLogger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   app.useLogger(winstonLogger);
 

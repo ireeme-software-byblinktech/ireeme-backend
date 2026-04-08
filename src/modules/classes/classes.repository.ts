@@ -43,4 +43,20 @@ export class ClassesRepository extends BaseRepository {
   ) {
     return this.prisma.class.update({ where: { id }, data });
   }
+
+  remove(id: string) {
+    return this.prisma.class.delete({ where: { id } });
+  }
+
+  addStudent(classId: string, studentId: string, schoolId: string) {
+    return this.prisma.classStudent.create({
+      data: { classId, studentId, schoolId },
+    });
+  }
+
+  removeStudent(classId: string, studentId: string) {
+    return this.prisma.classStudent.delete({
+      where: { classId_studentId: { classId, studentId } },
+    });
+  }
 }

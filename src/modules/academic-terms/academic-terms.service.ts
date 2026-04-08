@@ -39,4 +39,15 @@ export class AcademicTermsService {
       ...(dto.endDate && { endDate: new Date(dto.endDate) }),
     });
   }
+
+  async remove(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.repo.remove(id);
+  }
+
+  async setActive(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    await this.repo.deactivateAll(schoolId);
+    return this.repo.update(id, { isActive: true });
+  }
 }

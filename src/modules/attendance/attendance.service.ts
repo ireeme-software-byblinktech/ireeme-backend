@@ -20,7 +20,6 @@ export class AttendanceService {
       dto.records,
     );
 
-    // Fire events for absent students → notification side effect
     for (const record of dto.records) {
       if (record.status === 'ABSENT') {
         this.events.emit('attendance.marked', {
@@ -45,11 +44,12 @@ export class AttendanceService {
     return this.repo.findByStudent(studentId, schoolId, page, limit, subjectId);
   }
 
-  getSummary(studentId: string, schoolId: string, fromDate: string, toDate: string) {
-    return this.repo.getSummary(studentId, schoolId, new Date(fromDate), new Date(toDate));
+  calculateSummary(studentId: string, schoolId: string, fromDate: string, toDate: string) {
+    return this.repo.calculateSummary(studentId, schoolId, new Date(fromDate), new Date(toDate));
   }
 
   getDailySummary(schoolId: string, date: string, classId: string) {
     return this.repo.getDailySummary(schoolId, new Date(date), classId);
   }
 }
+

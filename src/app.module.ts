@@ -25,6 +25,8 @@ import { TeachersModule } from './modules/teachers/teachers.module';
 import { ClassesModule } from './modules/classes/classes.module';
 import { SubjectsModule } from './modules/subjects/subjects.module';
 import { AcademicTermsModule } from './modules/academic-terms/academic-terms.module';
+import { SubmissionsModule } from './modules/submissions/submissions.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { GradesModule } from './modules/grades/grades.module';
@@ -64,6 +66,8 @@ import { HealthCheckModule } from './modules/health-check/health-check.module';
     ClassesModule,
     SubjectsModule,
     AcademicTermsModule,
+    SubmissionsModule,
+    MessagesModule,
     TimetableModule,
     AssignmentsModule,
     GradesModule,

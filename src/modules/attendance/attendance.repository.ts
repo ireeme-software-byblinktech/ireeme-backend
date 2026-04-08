@@ -9,11 +9,6 @@ export class AttendanceRepository extends BaseRepository {
     super(prisma);
   }
 
-  /**
-   * Upsert a batch of attendance records for a subject on a given date.
-   * Uses createMany with skipDuplicates=false — we do individual upserts
-   * so each record can be updated if the teacher re-marks.
-   */
   async bulkUpsert(
     schoolId: string,
     subjectId: string,
@@ -53,8 +48,7 @@ export class AttendanceRepository extends BaseRepository {
     });
   }
 
-  /** Attendance % per subject for a student in a date range */
-  async getSummary(studentId: string, schoolId: string, fromDate: Date, toDate: Date) {
+  async calculateSummary(studentId: string, schoolId: string, fromDate: Date, toDate: Date) {
     const records = await this.prisma.attendanceRecord.findMany({
       where: this.scopeToSchool(schoolId, {
         studentId,
@@ -63,7 +57,6 @@ export class AttendanceRepository extends BaseRepository {
       include: { subject: { select: { name: true, code: true } } },
     });
 
-    // Group by subject
     const bySubject: Record<string, { name: string; total: number; present: number }> = {};
     for (const r of records) {
       const key = r.subjectId;
@@ -81,9 +74,7 @@ export class AttendanceRepository extends BaseRepository {
     }));
   }
 
-  /** Daily summary for a class — how many present/absent/late */
   async getDailySummary(schoolId: string, date: Date, classId: string) {
-    // Use raw subquery to avoid generated-client relation mismatch before next prisma generate
     const studentIds = (
       await this.prisma.$queryRaw<{ student_id: string }[]>`
         SELECT student_id FROM class_students
@@ -101,3 +92,4 @@ export class AttendanceRepository extends BaseRepository {
     });
   }
 }
+

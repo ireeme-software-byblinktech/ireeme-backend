@@ -5,6 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PrismaService } from '../../database/prisma.service';
 import { QUEUE_NOTIFICATIONS } from '../queues.module';
 import { NotificationType } from '@prisma/client';
+import { NotificationsGateway } from '../../modules/notifications/notifications.gateway';
 
 export interface NotificationJobData {
   userId: string;
@@ -19,6 +20,7 @@ export interface NotificationJobData {
 export class NotificationsProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly gateway: NotificationsGateway,
     @Optional()
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -29,12 +31,18 @@ export class NotificationsProcessor extends WorkerHost {
   async process(job: Job<NotificationJobData>): Promise<void> {
     const { userId, schoolId, title, body, type } = job.data;
 
-    await this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: { userId, schoolId, title, body, type },
     });
 
+    // IR-104: Push real-time update
+    this.gateway.notifyUser(userId, {
+      ...notification,
+      // Ensure specific fields match frontend expectations if needed
+    });
+
     this.logger?.log(
-      `Notification created for user ${userId}: ${title}`,
+      `Notification created and pushed for user ${userId}: ${title}`,
       NotificationsProcessor.name,
     );
   }

@@ -19,7 +19,7 @@ const mockRepo = {
 const NURSE_ROLES = ['NURSE'];
 const STUDENT_ROLES = ['STUDENT'];
 const STUDENT_ID = 'stu-1';
-const REQUESTER_ID = 'stu-1'; // same as student = own records
+const REQUESTER_ID = 'stu-1';
 
 describe('HealthService', () => {
   let service: HealthService;
@@ -32,8 +32,6 @@ describe('HealthService', () => {
     service = module.get<HealthService>(HealthService);
     jest.clearAllMocks();
   });
-
-  // ── createRecord ──────────────────────────────────────────────────────────
 
   describe('createRecord', () => {
     it('creates a health record with visitDate defaulting to now', async () => {
@@ -58,8 +56,6 @@ describe('HealthService', () => {
     });
   });
 
-  // ── findRecordsByStudent ──────────────────────────────────────────────────
-
   describe('findRecordsByStudent', () => {
     it('nurse can view any student records', async () => {
       mockRepo.findRecordsByStudent.mockResolvedValue([]);
@@ -80,8 +76,6 @@ describe('HealthService', () => {
     });
   });
 
-  // ── createMedicalCase ─────────────────────────────────────────────────────
-
   describe('createMedicalCase', () => {
     it('creates a medical case scoped to school', async () => {
       const dto = { studentId: STUDENT_ID, diagnosis: 'Asthma', symptoms: 'Wheezing' };
@@ -92,8 +86,6 @@ describe('HealthService', () => {
       expect(mockRepo.createMedicalCase).toHaveBeenCalledWith({ schoolId: 'school-1', ...dto });
     });
   });
-
-  // ── closeMedicalCase ──────────────────────────────────────────────────────
 
   describe('closeMedicalCase', () => {
     it('updates medical case status to CLOSED', async () => {
@@ -111,22 +103,18 @@ describe('HealthService', () => {
     });
   });
 
-  // ── createAppointment ─────────────────────────────────────────────────────
-
   describe('createAppointment', () => {
-    it('creates appointment with parsed date', async () => {
+    it('creates appointment with parsed date and schoolId', async () => {
       const dto = { studentId: STUDENT_ID, nurseId: 'nurse-1', scheduledAt: '2025-02-01T10:00:00Z', reason: 'Checkup' };
       mockRepo.createAppointment.mockResolvedValue({ id: 'appt-1' });
 
-      const result = await service.createAppointment(dto);
+      const result = await service.createAppointment('school-1', dto);
       expect(result.id).toBe('appt-1');
       expect(mockRepo.createAppointment).toHaveBeenCalledWith(
-        expect.objectContaining({ scheduledAt: new Date('2025-02-01T10:00:00Z') }),
+        expect.objectContaining({ scheduledAt: new Date('2025-02-01T10:00:00Z'), schoolId: 'school-1' }),
       );
     });
   });
-
-  // ── findAppointmentsByStudent ─────────────────────────────────────────────
 
   describe('findAppointmentsByStudent', () => {
     it('nurse can view any student appointments', async () => {
@@ -141,8 +129,6 @@ describe('HealthService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
   });
-
-  // ── updateAppointmentStatus ───────────────────────────────────────────────
 
   describe('updateAppointmentStatus', () => {
     it('updates status when appointment exists', async () => {

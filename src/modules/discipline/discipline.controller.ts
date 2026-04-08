@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Query,
+  Delete,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
@@ -43,6 +44,25 @@ export class DisciplineController {
     return this.service.createOffenseType(user.schoolId!, dto);
   }
 
+  @Patch('offense-types/:id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Update an offense type' })
+  updateOffenseType(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: Partial<CreateOffenseTypeDto>,
+  ) {
+    return this.service.updateOffenseType(id, user.schoolId!, dto);
+  }
+
+  @Delete('offense-types/:id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete an offense type' })
+  deleteOffenseType(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.deleteOffenseType(id, user.schoolId!);
+  }
+
   // ── Cases ──────────────────────────────────────────────────────────────────
 
   @Get('cases')
@@ -73,6 +93,24 @@ export class DisciplineController {
   @ApiOperation({ summary: 'Mark a discipline case as resolved' })
   close(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.close(id, user.schoolId!);
+  }
+
+  @Delete('cases/:id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a discipline case' })
+  deleteCase(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.deleteCase(id, user.schoolId!);
+  }
+
+  @Get('student/:studentId/score')
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER, RoleType.DISCIPLINE_OFFICER)
+  @ApiOperation({ summary: 'Calculate current total point deduction for a student' })
+  getStudentScore(
+    @CurrentUser() user: JwtPayload,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    return this.service.calculateScore(studentId, user.schoolId!);
   }
 
   // ── Appeals ────────────────────────────────────────────────────────────────

@@ -113,32 +113,51 @@ model School {
   name      String
   code      String   @unique
   region    String?
-  logoUrl   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  logoUrl   String?  @map("logo_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  users          User[]
-  students       Student[]
-  teachers       Teacher[]
-  parents        Parent[]
-  classes        Class[]
-  classStudents  ClassStudent[]
-  subjects       Subject[]
-  academicTerms  AcademicTerm[]
-  assignments    Assignment[]
-  grades         Grade[]
-  attendanceRecs AttendanceRecord[]
-  healthRecords  HealthRecord[]
-  medicalCases   MedicalCase[]
-  disciplineCases DisciplineCase[]
-  feeRecords     FeeRecord[]
-  transactions   Transaction[]
-  libraryBooks   LibraryBook[]
-  teacherSubjects TeacherSubject[]
-  timetableSlots TimetableSlot[]
-  notifications  Notification[]
-  elections      Election[]
-  uploadedFiles  UploadedFile[]
+  users              User[]
+  students           Student[]
+  teachers           Teacher[]
+  parents            Parent[]
+  classes            Class[]
+  classStudents      ClassStudent[]
+  subjects           Subject[]
+  academicTerms      AcademicTerm[]
+  assignments        Assignment[]
+  grades             Grade[]
+  attendanceRecs     AttendanceRecord[]
+  healthRecords      HealthRecord[]
+  medicalCases       MedicalCase[]
+  disciplineCases    DisciplineCase[]
+  feeRecords         FeeRecord[]
+  transactions       Transaction[]
+  libraryBooks       LibraryBook[]
+  teacherSubjects    TeacherSubject[]
+  timetableSlots     TimetableSlot[]
+  notifications      Notification[]
+  elections          Election[]
+  uploadedFiles      UploadedFile[]
+  UserRole           UserRole[]
+  RefreshToken       RefreshToken[]
+  Staff              Staff[]
+  ParentStudent      ParentStudent[]
+  Submission         Submission[]
+  Appointment        Appointment[]
+  OffenseType        OffenseType[]
+  DisciplineAppeal   DisciplineAppeal[]
+  StockItem          StockItem[]
+  StockSale          StockSale[]
+  Borrowing          Borrowing[]
+  Conversation       Conversation[]
+  ConversationMember ConversationMember[]
+  Message            Message[]
+  Candidate          Candidate[]
+  Vote               Vote[]
+  PermissionRequest  PermissionRequest[]
+  AiConversation     AiConversation[]
+  AiMessage          AiMessage[]
 
   @@index([code])
   @@map("schools")
@@ -148,30 +167,39 @@ model User {
   id           String    @id @default(uuid())
   schoolId     String?   @map("school_id") // Optional for SUPER_ADMINs
   email        String    @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  avatarUrl    String?
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  passwordHash String    @map("password_hash")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  phoneNumber  String?   @map("phone_number")
+  avatarUrl    String?   @map("avatar_url")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  school           School?           @relation(fields: [schoolId], references: [id])
+  school           School?              @relation(fields: [schoolId], references: [id])
   roles            UserRole[]
   student          Student?
   teacher          Teacher?
+  staff            Staff?
   parent           Parent?
   refreshTokens    RefreshToken[]
   notifications    Notification[]
-  sentMessages     Message[]         @relation("SentMessages")
+  sentMessages     Message[]            @relation("SentMessages")
   conversations    ConversationMember[]
   aiConversations  AiConversation[]
+<<<<<<< feat/files-module-ir115-ir116-ir117
   attendanceMarked AttendanceRecord[] @relation("MarkedBy")
   healthVisits     HealthRecord[]    @relation("NurseVisits")
   disciplineCases  DisciplineCase[]  @relation("OfficerCases")
   appointments     Appointment[]     @relation("NurseAppointments")
   uploadedFiles    UploadedFile[]
+=======
+  attendanceMarked AttendanceRecord[]   @relation("MarkedBy")
+  healthVisits     HealthRecord[]       @relation("NurseVisits")
+  disciplineCases  DisciplineCase[]     @relation("OfficerCases")
+  appointments     Appointment[]        @relation("NurseAppointments")
+>>>>>>> main
 
   @@index([schoolId, email])
   @@index([schoolId, isActive])
@@ -179,41 +207,48 @@ model User {
 }
 
 model UserRole {
-  id     String   @id @default(uuid())
-  userId String
-  role   RoleType
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  schoolId String?  @map("school_id")
+  role     RoleType
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School? @relation(fields: [schoolId], references: [id])
 
   @@unique([userId, role])
+  @@index([schoolId])
   @@map("user_roles")
 }
 
 model RefreshToken {
   id        String   @id @default(uuid())
-  userId    String
-  tokenHash String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  userId    String   @map("user_id")
+  schoolId  String?  @map("school_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School? @relation(fields: [schoolId], references: [id])
 
   @@index([userId])
+  @@index([schoolId])
   @@map("refresh_tokens")
 }
 
 model Student {
   id             String    @id @default(uuid())
-  userId         String    @unique
+  userId         String    @unique @map("user_id")
   schoolId       String    @map("school_id")
+  classId        String?   @map("class_id")
   studentNumber  String    @map("student_number")
   dateOfBirth    DateTime? @map("date_of_birth")
   gender         String?
   enrollmentDate DateTime  @default(now()) @map("enrollment_date")
   isActive       Boolean   @default(true) @map("is_active")
 
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school          School            @relation(fields: [schoolId], references: [id])
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school          School              @relation(fields: [schoolId], references: [id])
   classes         ClassStudent[]
   parentLinks     ParentStudent[]
   submissions     Submission[]
@@ -230,36 +265,54 @@ model Student {
   stockSales      StockSale[]
 
   @@unique([schoolId, studentNumber])
+  @@index([schoolId, classId])
   @@index([schoolId])
   @@index([schoolId, isActive])
   @@map("students")
 }
 
 model Teacher {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  schoolId    String   @map("school_id")
-  employeeNum String   @map("employee_num")
-  department  String?
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  schoolId      String   @map("school_id")
+  employeeNum   String   @map("employee_num")
+  department    String?
   qualification String?
-  joiningDate DateTime @default(now()) @map("joining_date")
-  isActive    Boolean  @default(true) @map("is_active")
+  joiningDate   DateTime @default(now()) @map("joining_date")
+  isActive      Boolean  @default(true) @map("is_active")
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school          School           @relation(fields: [schoolId], references: [id])
-  subjects        TeacherSubject[]
-  assignments     Assignment[]
-  grades          Grade[]
-  timetableSlots  TimetableSlot[]
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school         School           @relation(fields: [schoolId], references: [id])
+  subjects       TeacherSubject[]
+  assignments    Assignment[]
+  grades         Grade[]
+  timetableSlots TimetableSlot[]
 
   @@unique([schoolId, employeeNum])
   @@index([schoolId])
   @@map("teachers")
 }
 
+model Staff {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  schoolId    String   @map("school_id")
+  employeeNum String   @map("employee_num")
+  designation String
+  joiningDate DateTime @default(now()) @map("joining_date")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, employeeNum])
+  @@index([schoolId])
+  @@map("staff_profiles")
+}
+
 model Parent {
   id       String  @id @default(uuid())
-  userId   String  @unique
+  userId   String  @unique @map("user_id")
   schoolId String  @map("school_id")
   phone    String?
   address  String?
@@ -274,14 +327,17 @@ model Parent {
 
 model ParentStudent {
   id        String  @id @default(uuid())
-  parentId  String
-  studentId String
+  schoolId  String  @map("school_id")
+  parentId  String  @map("parent_id")
+  studentId String  @map("student_id")
   verified  Boolean @default(false)
 
+  school  School  @relation(fields: [schoolId], references: [id])
   parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([parentId, studentId])
+  @@index([schoolId])
   @@map("parent_students")
 }
 
@@ -295,10 +351,10 @@ model AcademicTerm {
   endDate   DateTime @map("end_date")
   isActive  Boolean  @default(false) @map("is_active")
 
-  school      School       @relation(fields: [schoolId], references: [id])
-  classes     Class[]
-  grades      Grade[]
-  feeRecords  FeeRecord[]
+  school     School      @relation(fields: [schoolId], references: [id])
+  classes    Class[]
+  grades     Grade[]
+  feeRecords FeeRecord[]
 
   @@index([schoolId])
   @@map("academic_terms")
@@ -323,10 +379,10 @@ model Class {
 }
 
 model ClassStudent {
-  id        String   @id @default(uuid())
-  schoolId  String   @map("school_id")
-  classId   String   @map("class_id")
-  studentId String   @map("student_id")
+  id         String   @id @default(uuid())
+  schoolId   String   @map("school_id")
+  classId    String   @map("class_id")
+  studentId  String   @map("student_id")
   enrolledAt DateTime @default(now()) @map("enrolled_at")
 
   school  School  @relation(fields: [schoolId], references: [id])
@@ -345,19 +401,20 @@ model Subject {
   code     String
   classId  String? @map("class_id")
 
-  school          School           @relation(fields: [schoolId], references: [id])
-  class           Class?           @relation(fields: [classId], references: [id])
-  teachers        TeacherSubject[]
-  assignments     Assignment[]
-  grades          Grade[]
-  attendanceRecs  AttendanceRecord[]
-  timetableSlots  TimetableSlot[]
+  school         School             @relation(fields: [schoolId], references: [id])
+  class          Class?             @relation(fields: [classId], references: [id])
+  teachers       TeacherSubject[]
+  assignments    Assignment[]
+  grades         Grade[]
+  attendanceRecs AttendanceRecord[]
+  timetableSlots TimetableSlot[]
 
   @@index([schoolId])
   @@map("subjects")
 }
 
 model TeacherSubject {
+  id        String @id @default(uuid())
   schoolId  String @map("school_id")
   teacherId String @map("teacher_id")
   subjectId String @map("subject_id")
@@ -394,18 +451,18 @@ model TimetableSlot {
 
 model Assignment {
   id          String         @id @default(uuid())
-  schoolId    String
-  subjectId   String
-  teacherId   String
+  schoolId    String         @map("school_id")
+  subjectId   String         @map("subject_id")
+  teacherId   String         @map("teacher_id")
   title       String
   description String?
   type        AssignmentType
-  maxScore    Decimal        @db.Decimal(5, 2)
+  maxScore    Decimal        @map("max_score") @db.Decimal(5, 2)
   weight      Decimal        @db.Decimal(4, 2)
-  dueAt       DateTime
-  allowLate   Boolean        @default(false)
-  fileUrls    String[]
-  createdAt   DateTime       @default(now())
+  dueAt       DateTime       @map("due_at")
+  allowLate   Boolean        @default(false) @map("allow_late")
+  fileUrls    String[]       @map("file_urls")
+  createdAt   DateTime       @default(now()) @map("created_at")
 
   school      School       @relation(fields: [schoolId], references: [id])
   subject     Subject      @relation(fields: [subjectId], references: [id])
@@ -419,35 +476,39 @@ model Assignment {
 
 model Submission {
   id           String           @id @default(uuid())
-  assignmentId String
-  studentId    String
-  fileUrls     String[]
-  submittedAt  DateTime         @default(now())
-  isLate       Boolean          @default(false)
+  schoolId     String           @map("school_id")
+  assignmentId String           @map("assignment_id")
+  studentId    String           @map("student_id")
+  content      String?          @db.Text
+  fileUrls     String[]         @map("file_urls")
+  submittedAt  DateTime         @default(now()) @map("submitted_at")
+  isLate       Boolean          @default(false) @map("is_late")
   status       SubmissionStatus @default(SUBMITTED)
 
+  school     School     @relation(fields: [schoolId], references: [id])
   assignment Assignment @relation(fields: [assignmentId], references: [id])
   student    Student    @relation(fields: [studentId], references: [id])
   grade      Grade?
 
   @@unique([assignmentId, studentId])
+  @@index([schoolId])
   @@index([studentId, status])
   @@map("submissions")
 }
 
 model Grade {
-  id           String       @id @default(uuid())
-  schoolId     String
-  submissionId String       @unique
-  studentId    String
-  subjectId    String
-  teacherId    String
-  termId       String
-  score        Decimal      @db.Decimal(6, 2)
-  maxScore     Decimal      @db.Decimal(6, 2)
+  id           String        @id @default(uuid())
+  schoolId     String        @map("school_id")
+  submissionId String        @unique @map("submission_id")
+  studentId    String        @map("student_id")
+  subjectId    String        @map("subject_id")
+  teacherId    String        @map("teacher_id")
+  termId       String        @map("term_id")
+  score        Decimal       @db.Decimal(6, 2)
+  maxScore     Decimal       @map("max_score") @db.Decimal(6, 2)
   feedback     String?
-  gradedAt     DateTime     @default(now())
-  appealStatus AppealStatus?
+  gradedAt     DateTime      @default(now()) @map("graded_at")
+  appealStatus AppealStatus? @map("appeal_status")
 
   school     School       @relation(fields: [schoolId], references: [id])
   submission Submission   @relation(fields: [submissionId], references: [id])
@@ -463,18 +524,18 @@ model Grade {
 
 model AttendanceRecord {
   id         String           @id @default(uuid())
-  schoolId   String
-  studentId  String
-  subjectId  String
+  schoolId   String           @map("school_id")
+  studentId  String           @map("student_id")
+  subjectId  String           @map("subject_id")
   date       DateTime         @db.Date
   status     AttendanceStatus
-  markedById String
+  markedById String           @map("marked_by_id")
   note       String?
 
-  school    School  @relation(fields: [schoolId], references: [id])
-  student   Student @relation(fields: [studentId], references: [id])
-  subject   Subject @relation(fields: [subjectId], references: [id])
-  markedBy  User    @relation("MarkedBy", fields: [markedById], references: [id])
+  school   School  @relation(fields: [schoolId], references: [id])
+  student  Student @relation(fields: [studentId], references: [id])
+  subject  Subject @relation(fields: [subjectId], references: [id])
+  markedBy User    @relation("MarkedBy", fields: [markedById], references: [id])
 
   @@unique([studentId, subjectId, date])
   @@index([schoolId, date, status])
@@ -486,12 +547,12 @@ model AttendanceRecord {
 
 model HealthRecord {
   id        String   @id @default(uuid())
-  schoolId  String
-  studentId String
-  visitDate DateTime @default(now())
+  schoolId  String   @map("school_id")
+  studentId String   @map("student_id")
+  visitDate DateTime @default(now()) @map("visit_date")
   diagnosis String
   treatment String?
-  nurseId   String
+  nurseId   String   @map("nurse_id")
 
   school  School  @relation(fields: [schoolId], references: [id])
   student Student @relation(fields: [studentId], references: [id])
@@ -503,11 +564,11 @@ model HealthRecord {
 
 model MedicalCase {
   id        String     @id @default(uuid())
-  schoolId  String
-  studentId String
+  schoolId  String     @map("school_id")
+  studentId String     @map("student_id")
   diagnosis String
   symptoms  String
-  openedAt  DateTime   @default(now())
+  openedAt  DateTime   @default(now()) @map("opened_at")
   status    CaseStatus @default(OPEN)
 
   school  School  @relation(fields: [schoolId], references: [id])
@@ -519,15 +580,18 @@ model MedicalCase {
 
 model Appointment {
   id          String            @id @default(uuid())
-  studentId   String
-  nurseId     String
-  scheduledAt DateTime
+  schoolId    String            @map("school_id")
+  studentId   String            @map("student_id")
+  nurseId     String            @map("nurse_id")
+  scheduledAt DateTime          @map("scheduled_at")
   reason      String
   status      AppointmentStatus @default(PENDING)
 
+  school  School  @relation(fields: [schoolId], references: [id])
   student Student @relation(fields: [studentId], references: [id])
   nurse   User    @relation("NurseAppointments", fields: [nurseId], references: [id])
 
+  @@index([schoolId])
   @@index([studentId])
   @@map("appointments")
 }
@@ -535,33 +599,34 @@ model Appointment {
 // ─── DISCIPLINE DOMAIN ───────────────────────────────────────────────────────
 
 model OffenseType {
-  id             String          @id @default(uuid())
-  schoolId       String
+  id             String @id @default(uuid())
+  schoolId       String @map("school_id")
   name           String
-  pointDeduction Int
+  pointDeduction Int    @map("point_deduction")
 
-  cases DisciplineCase[]
+  school School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  cases  DisciplineCase[]
 
   @@index([schoolId])
   @@map("offense_types")
 }
 
 model DisciplineCase {
-  id           String     @id @default(uuid())
-  schoolId     String
-  studentId    String
-  officerId    String
-  offenseTypeId String
-  description  String
-  pointsDeduct Int
-  status       CaseStatus @default(OPEN)
-  evidenceUrls String[]
-  createdAt    DateTime   @default(now())
+  id            String     @id @default(uuid())
+  schoolId      String     @map("school_id")
+  studentId     String     @map("student_id")
+  officerId     String     @map("officer_id")
+  offenseTypeId String     @map("offense_type_id")
+  description   String
+  pointsDeduct  Int        @map("points_deduct")
+  status        CaseStatus @default(OPEN)
+  evidenceUrls  String[]   @map("evidence_urls")
+  createdAt     DateTime   @default(now()) @map("created_at")
 
-  school      School          @relation(fields: [schoolId], references: [id])
-  student     Student         @relation(fields: [studentId], references: [id])
-  officer     User            @relation("OfficerCases", fields: [officerId], references: [id])
-  offenseType OffenseType     @relation(fields: [offenseTypeId], references: [id])
+  school      School            @relation(fields: [schoolId], references: [id])
+  student     Student           @relation(fields: [studentId], references: [id])
+  officer     User              @relation("OfficerCases", fields: [officerId], references: [id])
+  offenseType OffenseType       @relation(fields: [offenseTypeId], references: [id])
   appeal      DisciplineAppeal?
 
   @@index([schoolId, studentId])
@@ -569,13 +634,16 @@ model DisciplineCase {
 }
 
 model DisciplineAppeal {
-  id     String       @id @default(uuid())
-  caseId String       @unique
-  reason String
-  status AppealStatus @default(PENDING)
+  id       String       @id @default(uuid())
+  schoolId String       @map("school_id")
+  caseId   String       @unique @map("case_id")
+  reason   String
+  status   AppealStatus @default(PENDING)
 
-  case DisciplineCase @relation(fields: [caseId], references: [id])
+  school School         @relation(fields: [schoolId], references: [id])
+  case   DisciplineCase @relation(fields: [caseId], references: [id])
 
+  @@index([schoolId])
   @@map("discipline_appeals")
 }
 
@@ -583,11 +651,11 @@ model DisciplineAppeal {
 
 model FeeRecord {
   id         String        @id @default(uuid())
-  schoolId   String
-  studentId  String
-  termId     String
-  totalFee   Decimal       @db.Decimal(10, 2)
-  amountPaid Decimal       @db.Decimal(10, 2) @default(0)
+  schoolId   String        @map("school_id")
+  studentId  String        @map("student_id")
+  termId     String        @map("term_id")
+  totalFee   Decimal       @map("total_fee") @db.Decimal(10, 2)
+  amountPaid Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
   status     PaymentStatus @default(PENDING)
 
   school       School        @relation(fields: [schoolId], references: [id])
@@ -606,11 +674,12 @@ model Transaction {
   amount      Decimal       @db.Decimal(10, 2)
   method      PaymentMethod
   reference   String?
-  paidAt      DateTime      @default(now())
+  paidAt      DateTime      @default(now()) @map("paid_at")
 
-  feeRecord FeeRecord @relation(fields: [feeRecordId], references: [id])
   school    School    @relation(fields: [schoolId], references: [id])
+  feeRecord FeeRecord @relation(fields: [feeRecordId], references: [id])
 
+  @@index([schoolId])
   @@index([feeRecordId])
   @@index([schoolId, paidAt])
   @@map("transactions")
@@ -618,27 +687,31 @@ model Transaction {
 
 model StockItem {
   id       String  @id @default(uuid())
-  schoolId String
+  schoolId String  @map("school_id")
   name     String
   quantity Int
   price    Decimal @db.Decimal(8, 2)
 
-  sales StockSale[]
+  school School      @relation(fields: [schoolId], references: [id])
+  sales  StockSale[]
 
   @@index([schoolId])
   @@map("stock_items")
 }
 
 model StockSale {
-  id        String @id @default(uuid())
-  itemId    String
-  studentId String
+  id        String   @id @default(uuid())
+  schoolId  String   @map("school_id")
+  itemId    String   @map("item_id")
+  studentId String   @map("student_id")
   qty       Int
-  soldAt    DateTime @default(now())
+  soldAt    DateTime @default(now()) @map("sold_at")
 
+  school  School    @relation(fields: [schoolId], references: [id])
   item    StockItem @relation(fields: [itemId], references: [id])
   student Student   @relation(fields: [studentId], references: [id])
 
+  @@index([schoolId])
   @@map("stock_sales")
 }
 
@@ -646,16 +719,16 @@ model StockSale {
 
 model LibraryBook {
   id          String  @id @default(uuid())
-  schoolId    String
+  schoolId    String  @map("school_id")
   title       String
   author      String
   isbn        String?
   genre       String?
-  totalCopies Int
+  totalCopies Int     @map("total_copies")
   available   Int
-  coverUrl    String?
+  coverUrl    String? @map("cover_url")
 
-  school    School     @relation(fields: [schoolId], references: [id])
+  school     School      @relation(fields: [schoolId], references: [id])
   borrowings Borrowing[]
 
   @@index([schoolId])
@@ -664,16 +737,19 @@ model LibraryBook {
 
 model Borrowing {
   id         String       @id @default(uuid())
-  bookId     String
-  studentId  String
-  borrowedAt DateTime     @default(now())
-  dueDate    DateTime
-  returnedAt DateTime?
+  schoolId   String       @map("school_id")
+  bookId     String       @map("book_id")
+  studentId  String       @map("student_id")
+  borrowedAt DateTime     @default(now()) @map("borrowed_at")
+  dueDate    DateTime     @map("due_date")
+  returnedAt DateTime?    @map("returned_at")
   status     BorrowStatus @default(BORROWED)
 
+  school  School      @relation(fields: [schoolId], references: [id])
   book    LibraryBook @relation(fields: [bookId], references: [id])
   student Student     @relation(fields: [studentId], references: [id])
 
+  @@index([schoolId])
   @@index([studentId, returnedAt])
   @@map("borrowings")
 }
@@ -682,55 +758,65 @@ model Borrowing {
 
 model Notification {
   id        String           @id @default(uuid())
-  userId    String
-  schoolId  String
+  userId    String           @map("user_id")
+  schoolId  String           @map("school_id")
   title     String
   body      String
   type      NotificationType
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   school School @relation(fields: [schoolId], references: [id])
 
   @@index([userId, isRead])
+  @@index([schoolId])
   @@index([userId, isRead, createdAt])
   @@map("notifications")
 }
 
 model Conversation {
   id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+  schoolId  String   @map("school_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
+  school   School               @relation(fields: [schoolId], references: [id])
   members  ConversationMember[]
   messages Message[]
 
+  @@index([schoolId])
   @@map("conversations")
 }
 
 model ConversationMember {
-  id     String @id @default(uuid())
-  convId String
-  userId String
+  id       String @id @default(uuid())
+  schoolId String @map("school_id")
+  convId   String @map("conv_id")
+  userId   String @map("user_id")
 
+  school       School       @relation(fields: [schoolId], references: [id])
   conversation Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([convId, userId])
+  @@index([schoolId])
   @@map("conversation_members")
 }
 
 model Message {
   id       String   @id @default(uuid())
-  convId   String
-  senderId String
+  schoolId String   @map("school_id")
+  convId   String   @map("conv_id")
+  senderId String   @map("sender_id")
   content  String
-  isRead   Boolean  @default(false)
-  sentAt   DateTime @default(now())
+  isRead   Boolean  @default(false) @map("is_read")
+  sentAt   DateTime @default(now()) @map("sent_at")
 
+  school       School       @relation(fields: [schoolId], references: [id])
   conversation Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
   sender       User         @relation("SentMessages", fields: [senderId], references: [id])
 
+  @@index([schoolId])
   @@index([convId, sentAt])
   @@map("messages")
 }
@@ -739,11 +825,11 @@ model Message {
 
 model Election {
   id       String         @id @default(uuid())
-  schoolId String
+  schoolId String         @map("school_id")
   title    String
   status   ElectionStatus @default(DRAFT)
-  startAt  DateTime
-  endAt    DateTime
+  startAt  DateTime       @map("start_at")
+  endAt    DateTime       @map("end_at")
 
   school     School      @relation(fields: [schoolId], references: [id])
   candidates Candidate[]
@@ -753,27 +839,33 @@ model Election {
 }
 
 model Candidate {
-  id         String @id @default(uuid())
-  electionId String
-  studentId  String
+  id         String  @id @default(uuid())
+  schoolId   String  @map("school_id")
+  electionId String  @map("election_id")
+  studentId  String  @map("student_id")
   bio        String?
 
+  school   School   @relation(fields: [schoolId], references: [id])
   election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
   votes    Vote[]
 
+  @@index([schoolId])
   @@index([electionId])
   @@map("candidates")
 }
 
 model Vote {
   id          String @id @default(uuid())
-  candidateId String
-  studentId   String
+  schoolId    String @map("school_id")
+  candidateId String @map("candidate_id")
+  studentId   String @map("student_id")
 
+  school    School    @relation(fields: [schoolId], references: [id])
   candidate Candidate @relation(fields: [candidateId], references: [id])
   student   Student   @relation(fields: [studentId], references: [id])
 
   @@unique([candidateId, studentId])
+  @@index([schoolId])
   @@map("votes")
 }
 
@@ -781,15 +873,18 @@ model Vote {
 
 model PermissionRequest {
   id         String           @id @default(uuid())
-  studentId  String
+  schoolId   String           @map("school_id")
+  studentId  String           @map("student_id")
   reason     String
-  fromDate   DateTime
-  toDate     DateTime
+  fromDate   DateTime         @map("from_date")
+  toDate     DateTime         @map("to_date")
   status     PermissionStatus @default(PENDING)
-  approvedBy String?
+  approvedBy String?          @map("approved_by")
 
+  school  School  @relation(fields: [schoolId], references: [id])
   student Student @relation(fields: [studentId], references: [id])
 
+  @@index([schoolId])
   @@index([studentId])
   @@map("permission_requests")
 }
@@ -798,31 +893,38 @@ model PermissionRequest {
 
 model AiConversation {
   id        String   @id @default(uuid())
-  userId    String
-  createdAt DateTime @default(now())
+  schoolId  String   @map("school_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
+  school   School      @relation(fields: [schoolId], references: [id])
   user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages AiMessage[]
 
+  @@index([schoolId])
   @@index([userId])
   @@map("ai_conversations")
 }
 
 model AiMessage {
   id             String   @id @default(uuid())
-  conversationId String
-  role           String   // 'user' | 'assistant'
+  schoolId       String   @map("school_id")
+  conversationId String   @map("conversation_id")
+  role           String // 'user' | 'assistant'
   content        String
-  sentAt         DateTime @default(now())
+  sentAt         DateTime @default(now()) @map("sent_at")
 
+  school       School         @relation(fields: [schoolId], references: [id])
   conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@map("ai_messages")
 }
 
 // ─── FILES DOMAIN ────────────────────────────────────────────────────────────
 
 model UploadedFile {
+<<<<<<< feat/files-module-ir115-ir116-ir117
   id         String  @id @default(uuid())
   schoolId   String
   userId     String
@@ -831,10 +933,21 @@ model UploadedFile {
   mimeType   String
   sizeBytes  Int
   scanStatus String  @default("PENDING") // PENDING | CLEAN | INFECTED
+=======
+  id       String @id @default(uuid())
+  schoolId String @map("school_id")
+  key      String @unique
+  bucket   String
+  mimeType String @map("mime_type")
+>>>>>>> main
 
   school School @relation(fields: [schoolId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
 
+<<<<<<< feat/files-module-ir115-ir116-ir117
   @@index([schoolId, userId])
+=======
+  @@index([schoolId])
+>>>>>>> main
   @@map("uploaded_files")
 }

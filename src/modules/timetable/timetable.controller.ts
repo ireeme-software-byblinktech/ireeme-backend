@@ -23,16 +23,38 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 export class TimetableController {
   constructor(private readonly service: TimetableService) {}
 
+  @Get('mine')
+  @ApiOperation({ summary: 'Get timetable for current student/teacher' })
+  getMyTimetable(@CurrentUser() user: JwtPayload) {
+    return this.service.findByUser(user);
+  }
+
+  @Get('student/:studentId')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Get timetable for a student' })
+  byStudent(
+    @CurrentUser() user: JwtPayload,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    return this.service.findByStudent(user.schoolId!, studentId);
+  }
+
   @Get('class/:classId')
   @ApiOperation({ summary: 'Get timetable for a class' })
-  byClass(@Param('classId', ParseUUIDPipe) classId: string) {
-    return this.service.findByClass(classId);
+  byClass(
+    @CurrentUser() user: JwtPayload,
+    @Param('classId', ParseUUIDPipe) classId: string,
+  ) {
+    return this.service.findByClass(user.schoolId!, classId);
   }
 
   @Get('teacher/:teacherId')
   @ApiOperation({ summary: 'Get timetable for a teacher' })
-  byTeacher(@Param('teacherId', ParseUUIDPipe) teacherId: string) {
-    return this.service.findByTeacher(teacherId);
+  byTeacher(
+    @CurrentUser() user: JwtPayload,
+    @Param('teacherId', ParseUUIDPipe) teacherId: string,
+  ) {
+    return this.service.findByTeacher(user.schoolId!, teacherId);
   }
 
   @Post()
@@ -45,7 +67,7 @@ export class TimetableController {
   @Delete(':id')
   @Roles(RoleType.SCHOOL_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.delete(id);
+  delete(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.delete(user.schoolId!, id);
   }
 }
