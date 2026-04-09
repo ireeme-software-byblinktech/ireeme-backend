@@ -3,32 +3,126 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../database/prisma.service';
 import { QUEUE_REPORTS } from '../../queues/queues.module';
+import { AttendanceStatus } from '@prisma/client';
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(QUEUE_REPORTS) private readonly reportsQueue: Queue,
-  ) {}
+  ) { }
+
+  async aggregateForStudent(studentId: string, termId: string, schoolId: string) {
+    const term = await this.prisma.academicTerm.findFirst({
+      where: { id: termId, schoolId },
+      select: { startDate: true, endDate: true }
+    })
+    if (!term) throw new NotFoundException('Term not found');
+
+    // 1. Fetch all Grade records for student + term + schoolId
+    const grades = await this.prisma.grade.findMany({
+      where: { studentId, termId, schoolId },
+      include: {
+        subject: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { subject: { name: 'asc' } },
+    });
+
+    // 2. Calculate GPA: sum of (score / maxScore * 100) / total subjects
+    const gpa = grades.length
+      ? Math.round(
+        (grades.reduce((sum, g) => sum + (Number(g.score) / Number(g.maxScore)) * 100, 0) /
+          grades.length) *
+        100,
+      ) / 100
+      : 0;
+
+    // 3. Fetch attendance summary per subject for the term
+    const attendanceRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentId,
+        schoolId,
+        // Filter by term date range
+        date: {
+          gte: term?.startDate ?? new Date(0),
+          lte: term?.endDate ?? new Date,
+        },
+      },
+      select: {
+        subjectId: true,
+        status: true,
+      },
+    });
+
+    // Group attendance by subject
+    const attendanceBySubject = attendanceRecords.reduce(
+      (acc, record) => {
+        if (!acc[record.subjectId]) {
+          acc[record.subjectId] = {
+            subjectId: record.subjectId,
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+            percentage: 0,
+          };
+        }
+        const status = record.status.toLowerCase();
+        switch (record.status) {
+          case AttendanceStatus.PRESENT:
+            acc[record.subjectId].present++;
+            break;
+          case AttendanceStatus.ABSENT:
+            acc[record.subjectId].absent++;
+            break;
+          case AttendanceStatus.LATE:
+            acc[record.subjectId].late++;
+            break;
+          case AttendanceStatus.EXCUSED:
+            acc[record.subjectId].excused++;
+            break;
+        }
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          subjectId: string;
+          present: number;
+          absent: number;
+          late: number;
+          excused: number;
+          percentage: number;
+        }
+      >,
+    );
+
+    // Calculate attendance percentage per subject
+    const attendanceSummary = Object.values(attendanceBySubject).map((summary) => {
+      const total = summary.present + summary.absent + summary.late + summary.excused;
+      summary.percentage =
+        total > 0 ? Math.round(((summary.present + summary.late) / total) * 100) : 0;
+      return summary;
+    });
+
+    // 4. Return combined object
+    return {
+      studentId,
+      termId,
+      gpa,
+      grades,
+      attendanceSummary,
+    };
+  }
 
   async getReportCard(studentId: string, termId: string, schoolId: string) {
-    const [student, studentUser, grades, attendance, term] = await Promise.all([
+    const [student, studentUser, term] = await Promise.all([
       this.prisma.student.findFirst({
         where: { id: studentId, schoolId },
       }),
       this.prisma.user.findFirst({
         where: { student: { id: studentId } },
         select: { firstName: true, lastName: true, email: true, avatarUrl: true },
-      }),
-      this.prisma.grade.findMany({
-        where: { studentId, termId, schoolId },
-        include: { subject: { select: { name: true, code: true } } },
-        orderBy: { subject: { name: 'asc' } },
-      }),
-      this.prisma.attendanceRecord.groupBy({
-        by: ['status'],
-        where: { studentId, schoolId },
-        _count: { status: true },
       }),
       this.prisma.academicTerm.findFirst({
         where: { id: termId, schoolId },
@@ -38,23 +132,8 @@ export class ReportsService {
     if (!student) throw new NotFoundException('Student not found');
     if (!term) throw new NotFoundException('Term not found');
 
-    // Calculate GPA
-    const gpa = grades.length
-      ? Math.round(
-          (grades.reduce((sum, g) => sum + (Number(g.score) / Number(g.maxScore)) * 100, 0) /
-            grades.length) *
-            100,
-        ) / 100
-      : 0;
-
-    // Attendance summary
-    const attendanceSummary = attendance.reduce(
-      (acc, r) => ({ ...acc, [r.status]: r._count.status }),
-      {} as Record<string, number>,
-    );
-    const totalDays = Object.values(attendanceSummary).reduce((a, b) => a + b, 0);
-    const presentDays = (attendanceSummary['PRESENT'] ?? 0) + (attendanceSummary['LATE'] ?? 0);
-    const attendancePercent = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+    // Use aggregateForStudent to get the data
+    const aggregatedData = await this.aggregateForStudent(studentId, termId, schoolId);
 
     const reportCard = {
       student: {
@@ -64,7 +143,10 @@ export class ReportsService {
         avatarUrl: studentUser?.avatarUrl ?? null,
       },
       term: { id: term.id, name: term.name, startDate: term.startDate, endDate: term.endDate },
-      grades: grades.map((g) => ({
+      attendance: {
+        
+      },
+      grades: aggregatedData.grades.map((g) => ({
         subject: g.subject.name,
         subjectCode: g.subject.code,
         score: Number(g.score),
@@ -73,17 +155,23 @@ export class ReportsService {
         feedback: g.feedback,
         gradedAt: g.gradedAt,
       })),
-      gpa,
-      attendance: { ...attendanceSummary, totalDays, presentDays, attendancePercent },
+      gpa: aggregatedData.gpa,
+      attendanceSummary: aggregatedData.attendanceSummary,
     };
 
-    // Queue PDF generation (Sprint 2 — stub)
+    // Queue PDF generation job
     await this.reportsQueue.add(
-      'generate-pdf',
-      { studentId, termId, schoolId },
+      'generate-report-card',
+      {
+        studentId,
+        termId,
+        schoolId,
+        requestedAt: new Date().toISOString(),
+      },
       { attempts: 3, priority: 2 },
     );
 
     return reportCard;
   }
+
 }
