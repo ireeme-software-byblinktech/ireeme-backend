@@ -5,6 +5,7 @@ import { AssignmentsRepository } from './assignments.repository';
 import { SubmissionsModule } from '../submissions/submissions.module';
 import { SubmissionsService } from '../submissions/submissions.service';
 import { SubmissionsRepository } from '../submissions/submissions.repository';
+import { SubmissionsModule } from '../submissions/submissions.module';
 
 @Module({
   imports: [forwardRef(() => SubmissionsModule)],

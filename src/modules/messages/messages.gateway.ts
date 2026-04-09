@@ -1,15 +1,14 @@
 import {
   WebSocketGateway,
   WebSocketServer,
-  SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
   OnGatewayConnection,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { OnEvent } from '@nestjs/event-emitter';
+import { Logger } from '@nestjs/common';
+import { MessagesRepository } from './messages.repository';
 
 @WebSocketGateway({
   namespace: 'messages',
@@ -24,6 +23,7 @@ export class MessagesGateway implements OnGatewayConnection {
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly repository: MessagesRepository,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -38,24 +38,24 @@ export class MessagesGateway implements OnGatewayConnection {
         secret: this.config.get('JWT_ACCESS_SECRET'),
       });
 
+      // Join a private room for the user
       client.join(`user:${payload.sub}`);
-      this.logger.log(`Client connected to messages: ${client.id} (user:${payload.sub})`);
+      this.logger.log(`User ${payload.sub} connected to messaging gateway`);
     } catch (err) {
       client.disconnect();
     }
   }
 
-  @SubscribeMessage('send-message')
-  handleMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { to: string; content: string },
-  ) {
-    // In a real app, you'd save to DB here.
-    // For "live chat" requirement, we just relay.
-    this.server.to(`user:${data.to}`).emit('new-message', {
-      from: (client as any).user?.sub || 'system', // we'd need to store user on client in handleConnection
-      content: data.content,
-      timestamp: new Date(),
+  @OnEvent('message.new')
+  async handleMessageCreated(payload: any) {
+    const { schoolId, convId, senderId } = payload;
+    
+    // Find all members of this conversation
+    const members = await this.repository.findConversationMembers(schoolId, convId);
+
+    // Emit the new message only to members
+    members.forEach((memberId) => {
+      this.server.to(`user:${memberId}`).emit('message.new', payload);
     });
   }
 
