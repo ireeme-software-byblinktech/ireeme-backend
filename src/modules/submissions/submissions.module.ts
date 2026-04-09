@@ -6,7 +6,7 @@ import { SubmissionListener } from './listeners/submission.listener';
 import { AssignmentsModule } from '../assignments/assignments.module';
 
 @Module({
-  imports: [AssignmentsModule],
+  imports: [forwardRef(() => AssignmentsModule)],
   controllers: [SubmissionsController],
   providers: [SubmissionsService, SubmissionsRepository, SubmissionListener],
   exports: [SubmissionsService],
