@@ -41,7 +41,7 @@ export class AiService {
 
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: 'You are a helpful academic assistant for Blink Campus, a school management system. Help students with their subjects and school life.' },
-      ...history.map(m => ({ 
+      ...history.map((m: any) => ({ 
         role: m.role as 'user' | 'assistant', 
         content: m.content 
       })),

@@ -18,7 +18,7 @@ export class AppealsService {
 
   async submit(studentId: string, gradeId: string, reason: string, schoolId: string) {
     // Validate the grade belongs to this student + schoolId
-    const grade = await this.gradesRepo.findById(gradeId);
+    const grade = await this.gradesRepo.findById(gradeId, schoolId);
     if (!grade || grade.schoolId !== schoolId || grade.studentId !== studentId) {
       throw new NotFoundException('Grade not found');
     }
@@ -64,7 +64,7 @@ export class AppealsService {
 
     // If APPROVED → update Grade.appealStatus to APPROVED
     if (status === AppealStatus.APPROVED) {
-      await this.gradesRepo.updateAppeal(appeal.gradeId, AppealStatus.APPROVED);
+      await this.gradesRepo.updateAppeal(appeal.gradeId, schoolId, AppealStatus.APPROVED);
     }
 
     return updatedAppeal;
