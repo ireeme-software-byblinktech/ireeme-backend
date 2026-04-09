@@ -671,6 +671,8 @@ model FeeRecord {
   totalFee   Decimal       @map("total_fee") @db.Decimal(10, 2)
   amountPaid Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
   status     PaymentStatus @default(PENDING)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
 
   school       School        @relation(fields: [schoolId], references: [id])
   student      Student       @relation(fields: [studentId], references: [id])
@@ -678,13 +680,14 @@ model FeeRecord {
   transactions Transaction[]
 
   @@index([schoolId, studentId])
+  @@index([schoolId, createdAt])
   @@map("fee_records")
 }
 
 model Transaction {
   id          String        @id @default(uuid())
-  feeRecordId String
-  schoolId    String
+  schoolId    String        @map("school_id")
+  feeRecordId String        @map("fee_record_id")
   amount      Decimal       @db.Decimal(10, 2)
   method      PaymentMethod
   reference   String?
@@ -693,9 +696,8 @@ model Transaction {
   school    School    @relation(fields: [schoolId], references: [id])
   feeRecord FeeRecord @relation(fields: [feeRecordId], references: [id])
 
-  @@index([schoolId])
-  @@index([feeRecordId])
   @@index([schoolId, paidAt])
+  @@index([feeRecordId])
   @@map("transactions")
 }
 
@@ -725,7 +727,7 @@ model StockSale {
   item    StockItem @relation(fields: [itemId], references: [id])
   student Student   @relation(fields: [studentId], references: [id])
 
-  @@index([schoolId])
+  @@index([schoolId, soldAt])
   @@map("stock_sales")
 }
 

@@ -38,6 +38,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LibraryModule } from './modules/library/library.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ParentsModule } from './modules/parents/parents.module';
 
@@ -80,6 +81,7 @@ import { ParentsModule } from './modules/parents/parents.module';
     LibraryModule,
     ReportsModule,
     HealthCheckModule,
+    FinanceModule,
     DashboardModule,
     ParentsModule,
   ],
