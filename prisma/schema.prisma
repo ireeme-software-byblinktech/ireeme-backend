@@ -158,6 +158,7 @@ model School {
   PermissionRequest  PermissionRequest[]
   AiConversation     AiConversation[]
   AiMessage          AiMessage[]
+  GradeAppeal        GradeAppeal[]
 
   @@index([code])
   @@map("schools")
@@ -188,10 +189,10 @@ model User {
   sentMessages     Message[]            @relation("SentMessages")
   conversations    ConversationMember[]
   aiConversations  AiConversation[]
-  attendanceMarked AttendanceRecord[] @relation("MarkedBy")
-  healthVisits     HealthRecord[]    @relation("NurseVisits")
-  disciplineCases  DisciplineCase[]  @relation("OfficerCases")
-  appointments     Appointment[]     @relation("NurseAppointments")
+  attendanceMarked AttendanceRecord[]   @relation("MarkedBy")
+  healthVisits     HealthRecord[]       @relation("NurseVisits")
+  disciplineCases  DisciplineCase[]     @relation("OfficerCases")
+  appointments     Appointment[]        @relation("NurseAppointments")
   uploadedFiles    UploadedFile[]
 
   @@index([schoolId, email])
@@ -256,6 +257,7 @@ model Student {
   votes           Vote[]
   permissionReqs  PermissionRequest[]
   stockSales      StockSale[]
+  gradeAppeals    GradeAppeal[]
 
   @@unique([schoolId, studentNumber])
   @@index([schoolId, classId])
@@ -509,10 +511,29 @@ model Grade {
   subject    Subject      @relation(fields: [subjectId], references: [id])
   teacher    Teacher      @relation(fields: [teacherId], references: [id])
   term       AcademicTerm @relation(fields: [termId], references: [id])
+  appeal     GradeAppeal?
 
   @@index([schoolId, studentId, termId])
   @@index([schoolId, subjectId, termId])
   @@map("grades")
+}
+
+model GradeAppeal {
+  id        String       @id @default(uuid())
+  gradeId   String       @unique @map("grade_id")
+  studentId String       @map("student_id")
+  schoolId  String       @map("school_id")
+  reason    String
+  status    AppealStatus @default(PENDING)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  grade   Grade   @relation(fields: [gradeId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+  school  School  @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, studentId])
+  @@map("grade_appeals")
 }
 
 model AttendanceRecord {

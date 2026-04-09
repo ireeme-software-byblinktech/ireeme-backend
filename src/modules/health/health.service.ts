@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { HealthRepository } from './health.repository';
 import { CreateHealthRecordDto } from './dto/create-health-record.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CreateMedicalCaseDto } from './dto/create-medical-case.dto';
+import { AppointmentStatus } from '@prisma/client';
 
 @Injectable()
 export class HealthService {
@@ -21,7 +22,27 @@ export class HealthService {
     });
   }
 
-  findRecordsByStudent(studentId: string, schoolId: string, page?: number, limit?: number) {
+  /**
+   * Nurse: can view any student's records in their school.
+   * Student/Parent: can only view records for the requesting student.
+   */
+  async findRecordsByStudent(
+    studentId: string,
+    schoolId: string,
+    requesterId: string,
+    requesterRoles: string[],
+    page?: number,
+    limit?: number,
+  ) {
+    const isNurseOrAdmin =
+      requesterRoles.includes('NURSE') ||
+      requesterRoles.includes('SCHOOL_ADMIN') ||
+      requesterRoles.includes('PARENT');
+
+    if (!isNurseOrAdmin && requesterId !== studentId) {
+      throw new ForbiddenException('You can only view your own health records');
+    }
+
     return this.repo.findRecordsByStudent(studentId, schoolId, page, limit);
   }
 
@@ -31,7 +52,21 @@ export class HealthService {
     return this.repo.createMedicalCase({ schoolId, ...dto });
   }
 
-  findMedicalCasesByStudent(studentId: string, schoolId: string) {
+  async findMedicalCasesByStudent(
+    studentId: string,
+    schoolId: string,
+    requesterId: string,
+    requesterRoles: string[],
+  ) {
+    const isNurseOrAdmin =
+      requesterRoles.includes('NURSE') ||
+      requesterRoles.includes('SCHOOL_ADMIN') ||
+      requesterRoles.includes('PARENT');
+
+    if (!isNurseOrAdmin && requesterId !== studentId) {
+      throw new ForbiddenException('You can only view your own medical cases');
+    }
+
     return this.repo.findMedicalCasesByStudent(studentId, schoolId);
   }
 
@@ -58,11 +93,28 @@ export class HealthService {
     });
   }
 
-  findAppointmentsByStudent(studentId: string, page?: number, limit?: number) {
+  async findAppointmentsByStudent(
+    studentId: string,
+    requesterId: string,
+    requesterRoles: string[],
+    page?: number,
+    limit?: number,
+  ) {
+    const isNurseOrAdmin =
+      requesterRoles.includes('NURSE') ||
+      requesterRoles.includes('SCHOOL_ADMIN') ||
+      requesterRoles.includes('PARENT');
+
+    if (!isNurseOrAdmin && requesterId !== studentId) {
+      throw new ForbiddenException('You can only view your own appointments');
+    }
+
     return this.repo.findAppointmentsByStudent(studentId, page, limit);
   }
 
-  updateAppointmentStatus(id: string, status: any) {
+  async updateAppointmentStatus(id: string, status: AppointmentStatus) {
+    const appt = await this.repo.findAppointmentById(id);
+    if (!appt) throw new NotFoundException('Appointment not found');
     return this.repo.updateAppointmentStatus(id, status);
   }
 }

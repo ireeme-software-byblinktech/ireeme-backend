@@ -6,6 +6,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsProcessor } from '../../queues/processors/notifications.processor';
 import { EmailsProcessor } from '../../queues/processors/emails.processor';
 import { QUEUE_NOTIFICATIONS, QUEUE_EMAILS } from '../../queues/queues.module';
+import { JwtService } from '@nestjs/jwt';
 
 @Global()
 @Module({
@@ -16,6 +17,7 @@ import { QUEUE_NOTIFICATIONS, QUEUE_EMAILS } from '../../queues/queues.module';
     NotificationsGateway,
     NotificationsProcessor,
     EmailsProcessor,
+    JwtService
   ],
   exports: [NotificationsService, NotificationsGateway],
 })

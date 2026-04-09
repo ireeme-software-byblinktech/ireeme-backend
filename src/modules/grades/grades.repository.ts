@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BaseRepository } from '../../database/base.repository';
+import { AppealStatus } from '@prisma/client';
 
 @Injectable()
 export class GradesRepository extends BaseRepository {
