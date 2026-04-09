@@ -72,4 +72,24 @@ export class NotificationsListener {
       });
     }
   }
+
+  @OnEvent('notification.send')
+  async onGenericNotification(payload: {
+    schoolId: string;
+    recipientIds: string[];
+    type: string;
+    title: string;
+    body: string;
+    data?: any;
+  }) {
+    for (const userId of payload.recipientIds) {
+      await this.notificationsService.send({
+        userId,
+        schoolId: payload.schoolId,
+        title: payload.title,
+        body: payload.body,
+        type: payload.type as NotificationType,
+      });
+    }
+  }
 }

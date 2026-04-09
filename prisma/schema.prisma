@@ -106,6 +106,12 @@ enum PermissionStatus {
   REJECTED
 }
 
+enum MessageType {
+  TEXT
+  FILE
+  VOICE
+}
+
 // ─── IDENTITY DOMAIN ─────────────────────────────────────────────────────────
 
 model School {
@@ -827,6 +833,8 @@ model Message {
   content  String
   isRead   Boolean  @default(false) @map("is_read")
   sentAt   DateTime @default(now()) @map("sent_at")
+  fileUrls String[] @map("file_urls")
+  type     MessageType
 
   school       School       @relation(fields: [schoolId], references: [id])
   conversation Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
