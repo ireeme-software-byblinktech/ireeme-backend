@@ -33,7 +33,7 @@ export class GradesService {
       feedback: dto.feedback,
     });
 
-    await this.repo.updateSubmissionStatus(submissionId, 'GRADED');
+    await this.repo.updateSubmissionStatus(submissionId, schoolId, 'GRADED');
     this.events.emit('grade.posted', {
       studentId: submission.studentId,
       gradeId: grade.id,
@@ -42,7 +42,7 @@ export class GradesService {
     return grade;
   }
 
-  async getStudentGrades(
+  async findByStudentTerm(
     studentId: string,
     termId: string,
     schoolId: string,
@@ -50,23 +50,23 @@ export class GradesService {
     limit = 50,
   ) {
     const grades = await this.repo.findByStudentTerm(studentId, termId, schoolId, page, limit);
-    const gpa = this.calculateGpa(grades);
+    const gpa = this.calculateGPA(grades);
     return { grades, gpa, page, limit };
   }
 
-  async submitAppeal(gradeId: string, _dto: AppealDto) {
-    const grade = await this.repo.findById(gradeId);
+  async submitAppeal(gradeId: string, schoolId: string, _dto: AppealDto) {
+    const grade = await this.repo.findById(gradeId, schoolId);
     if (!grade) throw new NotFoundException('Grade not found');
-    return this.repo.updateAppeal(gradeId, 'PENDING');
+    return this.repo.updateAppeal(gradeId, schoolId, 'PENDING');
   }
 
-  async resolveAppeal(gradeId: string, dto: ResolveAppealDto) {
-    const grade = await this.repo.findById(gradeId);
+  async resolveAppeal(gradeId: string, schoolId: string, dto: ResolveAppealDto) {
+    const grade = await this.repo.findById(gradeId, schoolId);
     if (!grade) throw new NotFoundException('Grade not found');
-    return this.repo.updateAppeal(gradeId, dto.status);
+    return this.repo.updateAppeal(gradeId, schoolId, dto.status);
   }
 
-  private calculateGpa(grades: any[]): number {
+  public calculateGPA(grades: any[]): number {
     if (!grades.length) return 0;
     const total = grades.reduce((sum, g) => sum + (Number(g.score) / Number(g.maxScore)) * 100, 0);
     return Math.round((total / grades.length) * 100) / 100;

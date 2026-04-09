@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AssignmentsRepository } from './assignments.repository';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
@@ -12,6 +12,7 @@ export class AssignmentsService {
   constructor(
     private readonly repo: AssignmentsRepository,
     private readonly events: EventEmitter2,
+    @Inject(forwardRef(() => SubmissionsService))
     private readonly submissionsService: SubmissionsService,
   ) {}
 
@@ -25,10 +26,18 @@ export class AssignmentsService {
     return a;
   }
 
-  create(schoolId: string, teacherId: string, dto: CreateAssignmentDto) {
+  async create(schoolId: string, teacherId: string, dto: CreateAssignmentDto) {
     const dueAt = new Date(dto.dueAt);
     if (dueAt <= new Date()) throw new BadRequestException('dueAt must be in the future');
-    return this.repo.create({ schoolId, teacherId, ...dto, dueAt });
+    const assignment = await this.repo.create({ schoolId, teacherId, ...dto, dueAt });
+
+    this.events.emit('assignment.created', {
+      assignmentId: assignment.id,
+      schoolId,
+      subjectId: dto.subjectId,
+    });
+
+    return assignment;
   }
 
   async update(id: string, schoolId: string, dto: UpdateAssignmentDto) {

@@ -39,6 +39,8 @@ import { LibraryModule } from './modules/library/library.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ParentsModule } from './modules/parents/parents.module';
 
 @Module({
   imports: [
@@ -80,6 +82,8 @@ import { FinanceModule } from './modules/finance/finance.module';
     ReportsModule,
     HealthCheckModule,
     FinanceModule,
+    DashboardModule,
+    ParentsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, NotificationsListener],
 })
