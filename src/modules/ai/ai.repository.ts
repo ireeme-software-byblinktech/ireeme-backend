@@ -28,7 +28,7 @@ export class AiRepository extends BaseRepository {
 
   async getMessages(conversationId: string, schoolId: string, limit: number) {
     return this.prisma.aiMessage.findMany({
-      where: this.scopeToSchool(schoolId, { conversationId }),
+      where: { conversationId, schoolId },
       orderBy: { sentAt: 'asc' },
       take: limit,
     });
@@ -47,7 +47,7 @@ export class AiRepository extends BaseRepository {
 
   async getUserConversations(userId: string, schoolId: string) {
     return this.prisma.aiConversation.findMany({
-      where: this.scopeToSchool(schoolId, { userId }),
+      where: { userId, schoolId },
       orderBy: { createdAt: 'desc' },
     });
   }

@@ -10,7 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
 import { AssignmentsService } from './assignments.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
@@ -29,6 +29,7 @@ export class AssignmentsController {
 
   @Get()
   @ApiOperation({ summary: 'List assignments (filter by subjectId or teacherId)' })
+  @ApiResponse({ status: 200, description: 'List of assignments retrieved successfully' })
   findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryAssignmentDto) {
     return this.service.findAll(user.schoolId!, query.subjectId, query.teacherId);
   }
@@ -36,18 +37,24 @@ export class AssignmentsController {
   @Post()
   @Roles(RoleType.TEACHER)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create assignment' })
+  @ApiOperation({ summary: 'Create assignment (Teachers only)' })
+  @ApiResponse({ status: 201, description: 'Assignment created successfully' })
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateAssignmentDto) {
     return this.service.create(user.schoolId!, user.sub, dto);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a specific assignment by ID' })
+  @ApiResponse({ status: 200, description: 'Assignment retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
   findOne(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.findById(id, user.schoolId!);
   }
 
   @Patch(':id')
   @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Update an assignment (Teachers only)' })
+  @ApiResponse({ status: 200, description: 'Assignment updated successfully' })
   update(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -58,7 +65,8 @@ export class AssignmentsController {
 
   @Post(':id/submit')
   @Roles(RoleType.STUDENT)
-  @ApiOperation({ summary: 'Submit assignment (student)' })
+  @ApiOperation({ summary: 'Submit assignment (Students only)' })
+  @ApiResponse({ status: 201, description: 'Assignment submitted successfully' })
   submit(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
