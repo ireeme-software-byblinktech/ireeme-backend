@@ -41,9 +41,9 @@ export class AiService {
 
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: 'You are a helpful academic assistant for Blink Campus, a school management system. Help students with their subjects and school life.' },
-      ...history.map((m: any) => ({ 
-        role: m.role as 'user' | 'assistant', 
-        content: m.content 
+      ...history.map((m: any) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
       })),
       { role: 'user', content },
     ];
@@ -95,7 +95,7 @@ export class AiService {
   async getHistory(userId: string, schoolId: string) {
     const conversations = await this.repo.getUserConversations(userId, schoolId);
     if (conversations.length === 0) return [];
-    
+
     // For now returning the most recent conversation's full history
     return this.repo.getMessages(conversations[0].id, schoolId, 50);
   }
