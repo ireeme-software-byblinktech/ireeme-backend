@@ -59,7 +59,7 @@ export class MessagesService {
     });
 
     const signedFileUrls = await Promise.all(
-      message.fileUrls.map((key) => this.uploadsService.getSignedUrl(key)),
+      message.fileUrls.map((key: string) => this.uploadsService.getSignedUrl(key)),
     );
 
     const payload = { 
@@ -113,7 +113,7 @@ export class MessagesService {
       paginatedMessages.map(async (msg) => ({
         ...msg,
         fileUrls: await Promise.all(
-          msg.fileUrls.map((key) => this.uploadsService.getSignedUrl(key)),
+          msg.fileUrls.map((key: string) => this.uploadsService.getSignedUrl(key)),
         ),
       })),
     );
