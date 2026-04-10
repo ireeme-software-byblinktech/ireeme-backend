@@ -236,6 +236,12 @@ Authorization: Bearer <accessToken>
 | POST | `/auth/logout` | Any | Blacklists token in Redis |
 | GET | `/auth/me` | Any | Current user from JWT |
 
+### Health
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/health` | Public | System health check — DB + Redis status |
+
 ### Schools
 
 | Method | Endpoint | Roles | Description |
@@ -320,7 +326,53 @@ Authorization: Bearer <accessToken>
 | POST | `/grades/:id/appeal` | STUDENT | Submit appeal |
 | PATCH | `/grades/:id/appeal/:status` | TEACHER | Resolve appeal |
 
+### Finance
+
+| Method | Endpoint | Roles | Description |
+|---|---|---|---|
+| POST | `/finance/payments` | ACCOUNTANT | Record fee payment for a student |
+| GET | `/finance/students/:id/balance` | ACCOUNTANT, PARENT | Outstanding balance + transactions |
+| GET | `/finance/transactions` | ACCOUNTANT | Paginated transactions with filters |
+| POST | `/finance/stock/sell` | ACCOUNTANT | Sell stock item to student |
+| GET | `/finance/dashboard` | ACCOUNTANT, SCHOOL_ADMIN | Finance totals summary |
+
+### Reports
+
+| Method | Endpoint | Roles | Description |
+|---|---|---|---|
+| GET | `/report-cards/:studentId/:termId` | SCHOOL_ADMIN, TEACHER, PARENT | Aggregated report card + queues PDF job |
+
 ---
+
+## Architecture — Request Flow
+
+Every API call passes through all 7 stages in sequence:
+
+```
+Client Request
+ │
+ ▼
+Rate Limiter (Redis)
+ │ 429 Too Many Requests if limit exceeded
+ ▼
+JWT Validation
+ │ 401 Unauthorized if token missing or invalid
+ ▼
+Role Check (RBAC)
+ │ 403 Forbidden if role not permitted
+ ▼
+School Scoping (TenantMiddleware)
+ │ Injects schoolId from JWT into every request
+ ▼
+Controller
+ │ Parses and validates input via DTOs
+ ▼
+Service → Repository → Database
+ │ Business logic + Prisma queries
+ │ Every query filtered by schoolId
+ ▼
+Response returned to client
+```
 
 ## Authentication Flow
 
@@ -389,6 +441,32 @@ docker-compose restart blink-redis
 # Wipe everything including volumes (full reset)
 docker-compose down -v
 ```
+
+---
+
+## Running Tests
+
+```bash
+npm run test:run           # Run all unit tests once
+npm run test:watch         # Watch mode during development
+npm run test:cov           # Coverage report
+
+# Integration tests (requires running DB + Redis)
+npx jest --testPathPattern=integration
+```
+
+### Integration Test Coverage
+
+| Flow | What is tested |
+|---|---|
+| Auth | Login, refresh, logout, token blacklist after logout |
+| Students | CRUD, role guards, school isolation (404 cross-school) |
+| Assignments + Grades | Create → submit → grade → appeal → resolve flow |
+
+All integration tests verify:
+- Correct HTTP status codes
+- `requestId` present in all error responses
+- School isolation — token from School A cannot access School B data
 
 ---
 

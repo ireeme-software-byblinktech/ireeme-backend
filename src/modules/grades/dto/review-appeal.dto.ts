@@ -16,15 +16,15 @@ export class ReviewAppealDto {
   @ApiProperty({
     description: 'Appeal status',
     enum: [AppealStatus.REVIEWING, AppealStatus.APPROVED, AppealStatus.REJECTED],
+    example: AppealStatus.APPROVED,
   })
-  @IsEnum([
-    AppealStatus.REVIEWING,
-    AppealStatus.APPROVED,
-    AppealStatus.REJECTED
-  ])
+  @IsEnum([AppealStatus.REVIEWING, AppealStatus.APPROVED, AppealStatus.REJECTED])
   status: ReviewableStatus;
 
-  @ApiPropertyOptional({ description: 'Optional comment from reviewer' })
+  @ApiPropertyOptional({
+    description: 'Optional comment from reviewer',
+    example: 'After review, the grade has been adjusted',
+  })
   @IsOptional()
   @IsString()
   comment?: string;

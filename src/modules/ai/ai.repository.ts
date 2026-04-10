@@ -10,13 +10,19 @@ export class AiRepository extends BaseRepository {
 
   async findOrCreateConversation(userId: string, schoolId: string) {
     const existing = await this.prisma.aiConversation.findFirst({
-      where: { userId, schoolId },
+      where: this.scopeToSchool(schoolId, { userId }),
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
 
     return this.prisma.aiConversation.create({
-      data: { userId, schoolId },
+      data: {
+        schoolId,
+        userId,
+      },
     });
   }
 
