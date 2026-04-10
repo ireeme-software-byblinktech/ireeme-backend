@@ -6,7 +6,9 @@ import { WinstonModule } from 'nest-winston';
 import { ConfigModule } from './config/config.module';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
-import { RedisModule } from './config/redis.module';
+import { RedisModule, REDIS_CLIENT } from './config/redis.module';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import Redis from 'ioredis';
 import { winstonConfig } from './config/winston.config';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -41,6 +43,10 @@ import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ParentsModule } from './modules/parents/parents.module';
+import { ElectionsModule } from './modules/elections/elections.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { AiModule } from './modules/ai/ai.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -50,13 +56,16 @@ import { ParentsModule } from './modules/parents/parents.module';
     RedisModule,
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => [
-        {
-          ttl: config.get<number>('RATE_LIMIT_TTL', 60) * 1000,
-          limit: config.get<number>('RATE_LIMIT_MAX', 300),
-        },
-      ],
+      inject: [ConfigService, REDIS_CLIENT],
+      useFactory: (config: ConfigService, redis: Redis) => ({
+        throttlers: [
+          {
+            ttl: config.get<number>('RATE_LIMIT_TTL', 60) * 1000,
+            limit: config.get<number>('RATE_LIMIT_MAX', 300),
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(redis),
+      }),
     }),
     QueuesModule,
     UploadsModule,
@@ -84,6 +93,10 @@ import { ParentsModule } from './modules/parents/parents.module';
     FinanceModule,
     DashboardModule,
     ParentsModule,
+    ElectionsModule,
+    PermissionsModule,
+    AiModule,
+    SuperAdminModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, NotificationsListener],
 })

@@ -3,17 +3,20 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RoleType } from '@prisma/client';
 import { LibraryService } from './library.service';
 import { CreateBookDto } from './dto/create-book.dto';
+import { UpdateBookDto } from './dto/update-book.dto';
 import { CreateBorrowingDto } from './dto/create-borrowing.dto';
 import { QueryBooksDto } from './dto/query-books.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -46,12 +49,31 @@ export class LibraryController {
     return this.service.createBook(user.schoolId!, dto);
   }
 
+  @Patch('books/:id')
+  @Roles(RoleType.LIBRARIAN, RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Update a book in the catalog' })
+  updateBook(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBookDto,
+  ) {
+    return this.service.updateBook(id, user.schoolId!, dto);
+  }
+
+  @Delete('books/:id')
+  @Roles(RoleType.LIBRARIAN, RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove a book from the catalog' })
+  deleteBook(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.deleteBook(id, user.schoolId!);
+  }
+
   @Post('borrowings')
   @Roles(RoleType.LIBRARIAN)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Record new borrowing + decrement available count' })
   borrow(@CurrentUser() user: JwtPayload, @Body() dto: CreateBorrowingDto) {
-    return this.service.borrow(user.schoolId!, dto);
+    return this.service.borrowBook(user.schoolId!, dto);
   }
 
   @Patch('borrowings/:id/return')
@@ -64,7 +86,18 @@ export class LibraryController {
   @Get('borrowings/student/:studentId')
   @Roles(RoleType.LIBRARIAN, RoleType.STUDENT, RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Get active borrowings for a student' })
-  activeBorrowings(@Param('studentId', ParseUUIDPipe) studentId: string) {
+  activeBorrowings(
+    @CurrentUser() user: JwtPayload,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    // Security: Students can only view their own borrowings
+    if (user.roles.includes(RoleType.STUDENT) && 
+        !user.roles.includes(RoleType.LIBRARIAN) && 
+        !user.roles.includes(RoleType.SCHOOL_ADMIN)) {
+      if (user.sub !== studentId) {
+        throw new ForbiddenException('You can only view your own borrowings');
+      }
+    }
     return this.service.findActiveBorrowings(studentId);
   }
 }

@@ -5,7 +5,7 @@ import { PrismaService } from './prisma.service';
  * All module repositories MUST extend this class.
  */
 export abstract class BaseRepository {
-  constructor(protected readonly prisma: PrismaService) {}
+  constructor(public readonly prisma: PrismaService) {}
 
   /**
    * Merges schoolId into any where clause — prevents cross-school data leaks.

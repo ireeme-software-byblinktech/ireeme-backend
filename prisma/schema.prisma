@@ -143,7 +143,8 @@ model School {
   teacherSubjects    TeacherSubject[]
   timetableSlots     TimetableSlot[]
   notifications      Notification[]
-  elections          Election[]
+  Election           Election[]
+  ElectionPosition   ElectionPosition[]
   uploadedFiles      UploadedFile[]
   UserRole           UserRole[]
   RefreshToken       RefreshToken[]
@@ -260,6 +261,7 @@ model Student {
   disciplineCases DisciplineCase[]
   feeRecords      FeeRecord[]
   borrowings      Borrowing[]
+  candidates      Candidate[]
   votes           Vote[]
   permissionReqs  PermissionRequest[]
   stockSales      StockSale[]
@@ -848,47 +850,72 @@ model Message {
 // ─── ELECTIONS DOMAIN ────────────────────────────────────────────────────────
 
 model Election {
-  id       String         @id @default(uuid())
-  schoolId String         @map("school_id")
-  title    String
-  status   ElectionStatus @default(DRAFT)
-  startAt  DateTime       @map("start_at")
-  endAt    DateTime       @map("end_at")
+  id        String           @id @default(uuid())
+  schoolId  String           @map("school_id")
+  title     String
+  status    ElectionStatus   @default(DRAFT)
+  startAt   DateTime         @map("start_at")
+  endAt     DateTime         @map("end_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
 
-  school     School      @relation(fields: [schoolId], references: [id])
-  candidates Candidate[]
+  school    School             @relation(fields: [schoolId], references: [id])
+  positions ElectionPosition[]
 
   @@index([schoolId])
   @@map("elections")
 }
 
-model Candidate {
-  id         String  @id @default(uuid())
-  schoolId   String  @map("school_id")
-  electionId String  @map("election_id")
-  studentId  String  @map("student_id")
-  bio        String?
+model ElectionPosition {
+  id         String   @id @default(uuid())
+  schoolId   String   @map("school_id")
+  electionId String   @map("election_id")
+  name       String
+  minVotes   Int      @default(1) @map("min_votes")
+  maxVotes   Int      @default(1) @map("max_votes")
 
-  school   School   @relation(fields: [schoolId], references: [id])
-  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  votes    Vote[]
+  school     School      @relation(fields: [schoolId], references: [id])
+  election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+  votes      Vote[]
 
   @@index([schoolId])
   @@index([electionId])
+  @@map("election_positions")
+}
+
+model Candidate {
+  id         String  @id @default(uuid())
+  schoolId   String  @map("school_id")
+  positionId String  @map("position_id")
+  studentId  String  @map("student_id")
+  bio        String? @db.Text
+  imageUrl   String? @map("image_url")
+
+  school   School           @relation(fields: [schoolId], references: [id])
+  position ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  student  Student          @relation(fields: [studentId], references: [id])
+  votes    Vote[]
+
+  @@index([schoolId])
+  @@index([positionId])
   @@map("candidates")
 }
 
 model Vote {
-  id          String @id @default(uuid())
-  schoolId    String @map("school_id")
-  candidateId String @map("candidate_id")
-  studentId   String @map("student_id")
+  id          String   @id @default(uuid())
+  schoolId    String   @map("school_id")
+  positionId  String   @map("position_id")
+  candidateId String   @map("candidate_id")
+  studentId   String   @map("student_id")
+  votedAt     DateTime @default(now()) @map("voted_at")
 
-  school    School    @relation(fields: [schoolId], references: [id])
-  candidate Candidate @relation(fields: [candidateId], references: [id])
-  student   Student   @relation(fields: [studentId], references: [id])
+  school    School           @relation(fields: [schoolId], references: [id])
+  position  ElectionPosition @relation(fields: [positionId], references: [id])
+  candidate Candidate        @relation(fields: [candidateId], references: [id])
+  student   Student          @relation(fields: [studentId], references: [id])
 
-  @@unique([candidateId, studentId])
+  @@unique([positionId, studentId])
   @@index([schoolId])
   @@map("votes")
 }

@@ -15,9 +15,10 @@ export class AiService {
     private readonly config: ConfigService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get<string>('OPENAI_API_KEY'),
-    });
+    const apiKey = this.config.get<string>('OPENAI_API_KEY');
+    if (apiKey && apiKey !== 'sk-placeholder-key-change-this') {
+      this.openai = new OpenAI({ apiKey });
+    }
     this.dailyLimit = this.config.get<number>('AI_DAILY_LIMIT', 10);
   }
 
@@ -26,7 +27,7 @@ export class AiService {
     return `ai:limit:${userId}:${today}`;
   }
 
-  async sendMessage(userId: string, schoolId: string, content: string) {
+  async chat(userId: string, schoolId: string, content: string) {
     const limitKey = this.getRateLimitKey(userId);
 
     // 1. Rate Limit Check
@@ -49,14 +50,14 @@ export class AiService {
     ];
 
     const apiKey = this.config.get<string>('OPENAI_API_KEY');
-    const isMock = !apiKey || apiKey === 'sk-placeholder-key';
+    const isMock = !this.openai || !apiKey || apiKey === 'sk-placeholder-key-change-this';
 
     try {
       let assistantMessage: string;
 
       if (isMock) {
         // Simulated AI response for development/testing
-        assistantMessage = `(Mock AI) Using development mode. I received your message: "${content}". Please configure a real 'OPENAI_API_KEY' in your .env for production quality responses.`;
+        assistantMessage = `(Mock AI Mode) I received: "${content}". Configure a real 'OPENAI_API_KEY' in .env for actual AI responses.`;
       } else {
         // 3. Call AI
         const response = await this.openai.chat.completions.create({
