@@ -57,4 +57,31 @@ export class MessagesRepository {
     });
     return members.map((m) => m.userId);
   }
+
+  async findUserConversations(schoolId: string, userId: string) {
+    return this.prisma.conversation.findMany({
+      where: {
+        schoolId,
+        members: { some: { userId } },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+        messages: {
+          take: 1,
+          orderBy: { sentAt: 'desc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

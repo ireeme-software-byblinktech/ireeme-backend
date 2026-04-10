@@ -164,10 +164,10 @@ describe('Messaging Module (Integration)', () => {
     }
   });
 
-  describe('POST /communications/send', () => {
+  describe('POST /messages', () => {
     it('should send a message with an image and return 201', async () => {
       const response = await request(app.getHttpServer())
-        .post('/communications/send')
+        .post('/messages')
         .set('Authorization', `Bearer ${authToken}`)
         .attach('attachments', Buffer.from('fake-image-content'), 'test.png')
         .field('convId', testConversationId)
@@ -184,7 +184,7 @@ describe('Messaging Module (Integration)', () => {
 
     it('should set type to VOICE for audio files', async () => {
       const response = await request(app.getHttpServer())
-        .post('/communications/send')
+        .post('/messages')
         .set('Authorization', `Bearer ${authToken}`)
         .attach('attachments', Buffer.from('fake-audio'), { filename: 'voice.mp3', contentType: 'audio/mpeg' })
         .field('convId', testConversationId)
@@ -197,7 +197,7 @@ describe('Messaging Module (Integration)', () => {
     it('should return 403 if user is not a member', async () => {
       const foreignId = '00000000-0000-0000-0000-000000000000';
       const response = await request(app.getHttpServer())
-        .post('/communications/send')
+        .post('/messages')
         .set('Authorization', `Bearer ${authToken}`)
         .field('convId', foreignId)
         .field('content', 'Forbidden');
@@ -206,7 +206,20 @@ describe('Messaging Module (Integration)', () => {
     });
   });
 
-  describe('GET /communications/messages/:convId', () => {
+  describe('GET /messages/conversations', () => {
+    it('should return all conversations for the user', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/messages/conversations')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThan(0);
+      expect(response.body[0].id).toBe(testConversationId);
+    });
+  });
+
+  describe('GET /messages/messages/:convId', () => {
     it('should return 25 messages and hasNextPage true', async () => {
       // Seed 30 messages
       const data = Array.from({ length: 30 }).map((_, i) => ({
@@ -220,7 +233,7 @@ describe('Messaging Module (Integration)', () => {
       await prisma.message.createMany({ data });
 
       const response = await request(app.getHttpServer())
-        .get(`/communications/messages/${testConversationId}`)
+        .get(`/messages/messages/${testConversationId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .query({ page: 1, limit: 25 });
 
@@ -232,7 +245,7 @@ describe('Messaging Module (Integration)', () => {
     it('should return 403 for non-members', async () => {
       const foreignId = '11111111-1111-1111-1111-111111111111';
       const response = await request(app.getHttpServer())
-        .get(`/communications/messages/${foreignId}`)
+        .get(`/messages/messages/${foreignId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(403);
