@@ -27,7 +27,14 @@ async function bootstrap() {
   // ── Security ──────────────────────────────────────────────────────────────
   app.use(helmet());
   app.use(cookieParser());
-  app.enableCors({ origin: process.env.CORS_ORIGIN || '*', credentials: true });
+
+  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'];
+  app.enableCors({ 
+    origin: allowedOrigins, 
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',
+  });
 
   // ── Global pipes ──────────────────────────────────────────────────────────
   // IR-92: Validation with implicit type conversion

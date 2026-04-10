@@ -60,6 +60,19 @@ export class LibraryRepository extends BaseRepository {
     return this.prisma.libraryBook.create({ data: { ...data, available: data.totalCopies } });
   }
 
+  updateBook(id: string, schoolId: string, data: Partial<Parameters<this['createBook']>[0]>) {
+    return this.prisma.libraryBook.update({
+      where: this.scopeToSchool(schoolId, { id }),
+      data,
+    });
+  }
+
+  deleteBook(id: string, schoolId: string) {
+    return this.prisma.libraryBook.delete({
+      where: this.scopeToSchool(schoolId, { id }),
+    });
+  }
+
   decrementAvailable(id: string) {
     return this.prisma.libraryBook.update({
       where: { id },
@@ -78,6 +91,12 @@ export class LibraryRepository extends BaseRepository {
 
   createBorrowing(data: { schoolId: string; bookId: string; studentId: string; dueDate: Date }) {
     return this.prisma.borrowing.create({ data });
+  }
+
+  findActiveBorrowingByStudent(schoolId: string, studentId: string, bookId: string) {
+    return this.prisma.borrowing.findFirst({
+      where: { schoolId, studentId, bookId, returnedAt: null },
+    });
   }
 
   findActiveBorrowings(studentId: string) {
