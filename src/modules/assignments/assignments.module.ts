@@ -1,16 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
 import { AssignmentsRepository } from './assignments.repository';
 import { SubmissionsModule } from '../submissions/submissions.module';
-import { SubmissionsService } from '../submissions/submissions.service';
-import { SubmissionsRepository } from '../submissions/submissions.repository';
-import { SubmissionsModule } from '../submissions/submissions.module';
 
 @Module({
-  imports: [],
+  imports: [forwardRef(() => SubmissionsModule)],
   controllers: [AssignmentsController],
-  providers: [AssignmentsService, AssignmentsRepository, SubmissionsService, SubmissionsRepository],
+  providers: [AssignmentsService, AssignmentsRepository],
   exports: [AssignmentsService, AssignmentsRepository],
 })
 export class AssignmentsModule { }
