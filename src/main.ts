@@ -8,8 +8,8 @@ import { AppModule } from './app.module';
 import { winstonConfig } from './config/winston.config';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/logging.interceptor';
-
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
+import { PrismaService } from './database/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -37,7 +37,6 @@ async function bootstrap() {
   });
 
   // ── Global pipes ──────────────────────────────────────────────────────────
-  // IR-92: Validation with implicit type conversion
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -48,9 +47,7 @@ async function bootstrap() {
   );
 
   // ── Global filter & interceptor ───────────────────────────────────────────
-  // IR-89: exception filter (receives Winston logger via DI)
   app.useGlobalFilters(new GlobalExceptionFilter(winstonLogger));
-  // IR-91: request/response logging interceptor
   app.useGlobalInterceptors(new LoggingInterceptor(winstonLogger));
 
   // ── API prefix ────────────────────────────────────────────────────────────
@@ -65,7 +62,34 @@ async function bootstrap() {
     .build();
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
 
-  await app.listen(process.env.PORT ?? 3000);
+  // ── Graceful shutdown ─────────────────────────────────────────────────────
+  const prismaService = app.get(PrismaService);
+  await prismaService.enableShutdownHooks(app);
+
+  // Enable shutdown hooks
+  app.enableShutdownHooks();
+
+  // Handle shutdown signals
+  const signals = ['SIGTERM', 'SIGINT'];
+  signals.forEach((signal) => {
+    process.on(signal, async () => {
+      winstonLogger.log(`Received ${signal}, starting graceful shutdown...`);
+      
+      // Give time for in-flight requests to complete
+      setTimeout(async () => {
+        await app.close();
+        winstonLogger.log('Application closed gracefully');
+        process.exit(0);
+      }, 15000); // 15 seconds drain period
+    });
+  });
+
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+  
+  winstonLogger.log(`Application is running on: http://localhost:${port}`);
+  winstonLogger.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  winstonLogger.log(`Health check: http://localhost:${port}/api/v1/health`);
 }
 
 bootstrap().catch(console.error);

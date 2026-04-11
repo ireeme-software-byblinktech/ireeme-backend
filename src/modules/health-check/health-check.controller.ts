@@ -19,50 +19,28 @@ export class HealthCheckController {
   @ApiResponse({
     status: 200,
     description: 'Health check result',
-    schema: {
-      type: 'object',
-      properties: {
-        status: {
-          type: 'string',
-          enum: ['ok', 'degraded'],
-          example: 'ok',
-        },
-        timestamp: {
-          type: 'string',
-          format: 'date-time',
-          example: '2026-04-09T20:00:00.000Z',
-        },
-        services: {
-          type: 'object',
-          properties: {
-            database: {
-              type: 'string',
-              enum: ['up', 'down'],
-              example: 'up',
-            },
-            redis: {
-              type: 'string',
-              enum: ['up', 'down'],
-              example: 'up',
-            },
-          },
-        },
-      },
-    },
   })
   async check() {
     let dbStatus: 'up' | 'down' = 'down';
     let redisStatus: 'up' | 'down' = 'down';
+    let dbLatency = 0;
+    let redisLatency = 0;
 
+    // Database health check
     try {
+      const start = Date.now();
       await this.prisma.$queryRaw`SELECT 1`;
+      dbLatency = Date.now() - start;
       dbStatus = 'up';
     } catch {
       dbStatus = 'down';
     }
 
+    // Redis health check
     try {
+      const start = Date.now();
       const result = await this.redis.ping();
+      redisLatency = Date.now() - start;
       redisStatus = result === 'PONG' ? 'up' : 'down';
     } catch {
       redisStatus = 'down';
@@ -74,9 +52,40 @@ export class HealthCheckController {
       status,
       timestamp: new Date().toISOString(),
       services: {
-        database: dbStatus,
-        redis: redisStatus,
+        database: {
+          status: dbStatus,
+          latency: `${dbLatency}ms`,
+        },
+        redis: {
+          status: redisStatus,
+          latency: `${redisLatency}ms`,
+        },
+      },
+      uptime: process.uptime(),
+      memory: {
+        used: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+        total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
       },
     };
+  }
+
+  @Get('ready')
+  @Public()
+  @ApiOperation({ summary: 'Readiness probe for Kubernetes' })
+  async readiness() {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      await this.redis.ping();
+      return { status: 'ready' };
+    } catch (error) {
+      return { status: 'not ready', error: error.message };
+    }
+  }
+
+  @Get('live')
+  @Public()
+  @ApiOperation({ summary: 'Liveness probe for Kubernetes' })
+  liveness() {
+    return { status: 'alive', timestamp: new Date().toISOString() };
   }
 }
