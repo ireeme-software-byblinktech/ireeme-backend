@@ -6,18 +6,25 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Logger, UseFilters } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @WebSocketGateway({
   namespace: 'notifications',
-  cors: { origin: '*' },
+  cors: {
+    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+  },
+  maxHttpBufferSize: 1e6, // 1MB max message size
+  pingTimeout: 60000,
+  pingInterval: 25000,
 })
 export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(NotificationsGateway.name);
+  private readonly connectedUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
 
   constructor(
     private readonly jwtService: JwtService,
@@ -28,6 +35,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     try {
       const token = this.extractToken(client);
       if (!token) {
+        this.logger.warn(`Connection rejected: No token provided`);
         client.disconnect();
         return;
       }
@@ -36,11 +44,20 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         secret: this.config.get('JWT_ACCESS_SECRET'),
       });
 
+      // Store user connection
+      if (!this.connectedUsers.has(payload.sub)) {
+        this.connectedUsers.set(payload.sub, new Set());
+      }
+      this.connectedUsers.get(payload.sub)!.add(client.id);
+
       // Join personal and school rooms
       client.join(`user:${payload.sub}`);
       if (payload.schoolId) {
         client.join(`school:${payload.schoolId}`);
       }
+
+      client.data.userId = payload.sub;
+      client.data.schoolId = payload.schoolId;
 
       this.logger.log(`Client connected to notifications: ${client.id} (user:${payload.sub})`);
     } catch (err) {
@@ -50,7 +67,17 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected from notifications: ${client.id}`);
+    const userId = client.data.userId;
+    if (userId) {
+      const userSockets = this.connectedUsers.get(userId);
+      if (userSockets) {
+        userSockets.delete(client.id);
+        if (userSockets.size === 0) {
+          this.connectedUsers.delete(userId);
+        }
+      }
+      this.logger.log(`Client disconnected from notifications: ${client.id}`);
+    }
   }
 
   private extractToken(client: Socket): string | null {
@@ -69,5 +96,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   /** Broadcast notification to an entire school */
   notifySchool(schoolId: string, data: any) {
     this.server.to(`school:${schoolId}`).emit('notification', data);
+  }
+
+  /**
+   * Get number of connected users
+   */
+  getConnectedUsersCount(): number {
+    return this.connectedUsers.size;
   }
 }

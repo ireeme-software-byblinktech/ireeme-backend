@@ -10,6 +10,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../database/prisma.service';
+import { CircuitBreakerService } from '../../common/services/circuit-breaker.service';
 
 // Allowed MIME types and their magic bytes
 const ALLOWED_TYPES: Record<string, { magic: number[]; ext: string }> = {
@@ -33,6 +34,7 @@ export class UploadsService {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly circuitBreaker: CircuitBreakerService,
   ) {
     this.bucket = config.get<string>('AWS_S3_BUCKET_NAME')!;
 
@@ -64,15 +66,18 @@ export class UploadsService {
     const ext = ALLOWED_TYPES[mimeType].ext;
     const key = `${folder}/${uuidv4()}.${ext}`;
 
-    await this.s3.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: file.buffer,
-        ContentType: mimeType,
-        ContentDisposition: 'attachment', // never render inline
-      }),
-    );
+    // Use circuit breaker for S3 operations
+    await this.circuitBreaker.execute('s3-upload', async () => {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: file.buffer,
+          ContentType: mimeType,
+          ContentDisposition: 'attachment', // never render inline
+        }),
+      );
+    });
 
     await this.prisma.uploadedFile.create({
       data: {
@@ -92,15 +97,19 @@ export class UploadsService {
 
   /** Short-lived pre-signed GET URL (15 min) */
   async getSignedUrl(key: string): Promise<string> {
-    return getSignedUrl(
-      this.s3,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn: 900 },
-    );
+    return this.circuitBreaker.execute('s3-presign', async () => {
+      return getSignedUrl(
+        this.s3,
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+        { expiresIn: 900 },
+      );
+    });
   }
 
   async delete(key: string): Promise<void> {
-    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    await this.circuitBreaker.execute('s3-delete', async () => {
+      await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    });
     await this.prisma.uploadedFile.deleteMany({ where: { key } });
   }
 

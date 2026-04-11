@@ -1,21 +1,21 @@
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { StudentsRepository } from './students.repository';
 import { UsersService } from '../users/users.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { QueryStudentDto } from './dto/query-student.dto';
-import { REDIS_CLIENT } from '../../config/redis.module';
+import { CacheService } from '../../common/services/cache.service';
 import { RoleType } from '@prisma/client';
 
 @Injectable()
 export class StudentsService {
   private readonly DASHBOARD_TTL = 300; // 5 min
+  private readonly STUDENT_TTL = 600; // 10 min
 
   constructor(
     private readonly studentsRepo: StudentsRepository,
     private readonly usersService: UsersService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly cacheService: CacheService,
   ) {}
 
   findAll(schoolId: string, query: QueryStudentDto) {
@@ -23,10 +23,17 @@ export class StudentsService {
   }
 
   async findById(id: string, schoolId: string) {
-    const student = await this.studentsRepo.findById(id, schoolId);
-    // scopeToSchool in repo means null = not in this school → 404
-    if (!student) throw new NotFoundException('Student not found');
-    return student;
+    const cacheKey = `school:${schoolId}:student:${id}`;
+    
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const student = await this.studentsRepo.findById(id, schoolId);
+        if (!student) throw new NotFoundException('Student not found');
+        return student;
+      },
+      { ttl: this.STUDENT_TTL },
+    );
   }
 
   async create(schoolId: string, dto: CreateStudentDto) {
@@ -41,13 +48,18 @@ export class StudentsService {
     });
 
     try {
-      return await this.studentsRepo.create({
+      const student = await this.studentsRepo.create({
         userId: user.id,
         schoolId,
         studentNumber: dto.studentNumber,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         gender: dto.gender,
       });
+
+      // Invalidate list cache
+      await this.cacheService.delPattern(`school:${schoolId}:student:list*`);
+      
+      return student;
     } catch (err: any) {
       if (err?.code === 'P2002') {
         throw new ConflictException('Student number already exists in this school');
@@ -57,33 +69,50 @@ export class StudentsService {
   }
 
   async update(id: string, schoolId: string, dto: UpdateStudentDto) {
-    await this.findById(id, schoolId);
-    return this.studentsRepo.update(id, schoolId, {
+    const student = await this.studentsRepo.update(id, schoolId, {
       ...(dto.studentNumber && { studentNumber: dto.studentNumber }),
       ...(dto.dateOfBirth && { dateOfBirth: new Date(dto.dateOfBirth) }),
       ...(dto.gender && { gender: dto.gender }),
     });
+
+    // Invalidate caches
+    await Promise.all([
+      this.cacheService.del(`school:${schoolId}:student:${id}`),
+      this.cacheService.del(`dashboard:${schoolId}:${id}`),
+      this.cacheService.delPattern(`school:${schoolId}:student:list*`),
+    ]);
+
+    return student;
   }
 
   async deactivate(id: string, schoolId: string) {
-    await this.findById(id, schoolId);
-    return this.studentsRepo.update(id, schoolId, { isActive: false });
+    const student = await this.studentsRepo.update(id, schoolId, { isActive: false });
+    
+    // Invalidate caches
+    await Promise.all([
+      this.cacheService.del(`school:${schoolId}:student:${id}`),
+      this.cacheService.del(`dashboard:${schoolId}:${id}`),
+      this.cacheService.delPattern(`school:${schoolId}:student:list*`),
+    ]);
+
+    return student;
   }
 
   async getDashboard(studentId: string, schoolId: string) {
     const cacheKey = `dashboard:${schoolId}:${studentId}`;
-    const cached = await this.redis.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-
-    await this.findById(studentId, schoolId); // 404 guard
-    const data = await this.studentsRepo.getDashboardData(studentId, schoolId);
-
-    await this.redis.setex(cacheKey, this.DASHBOARD_TTL, JSON.stringify(data));
-    return data;
+    
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        await this.findById(studentId, schoolId); // 404 guard
+        return this.studentsRepo.getDashboardData(studentId, schoolId);
+      },
+      { ttl: this.DASHBOARD_TTL },
+    );
   }
 
   async invalidateDashboard(studentId: string, schoolId: string) {
-    await this.redis.del(`dashboard:${schoolId}:${studentId}`);
+    await this.cacheService.del(`dashboard:${schoolId}:${studentId}`);
   }
 
   private generateTempPassword(): string {

@@ -12,13 +12,20 @@ import { MessagesRepository } from './messages.repository';
 
 @WebSocketGateway({
   namespace: 'messages',
-  cors: { origin: '*' },
+  cors: {
+    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+  },
+  maxHttpBufferSize: 1e6, // 1MB max message size
+  pingTimeout: 60000,
+  pingInterval: 25000,
 })
 export class MessagesGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(MessagesGateway.name);
+  private readonly connectedUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
 
   constructor(
     private readonly jwtService: JwtService,
@@ -30,6 +37,7 @@ export class MessagesGateway implements OnGatewayConnection {
     try {
       const token = this.extractToken(client);
       if (!token) {
+        this.logger.warn(`Connection rejected: No token provided`);
         client.disconnect();
         return;
       }
@@ -38,11 +46,34 @@ export class MessagesGateway implements OnGatewayConnection {
         secret: this.config.get('JWT_ACCESS_SECRET'),
       });
 
+      // Store user connection
+      if (!this.connectedUsers.has(payload.sub)) {
+        this.connectedUsers.set(payload.sub, new Set());
+      }
+      this.connectedUsers.get(payload.sub)!.add(client.id);
+
       // Join a private room for the user
       client.join(`user:${payload.sub}`);
-      this.logger.log(`User ${payload.sub} connected to messaging gateway`);
+      client.data.userId = payload.sub;
+      
+      this.logger.log(`User ${payload.sub} connected to messaging gateway (${client.id})`);
     } catch (err) {
+      this.logger.error(`Connection verification failed: ${err.message}`);
       client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: Socket) {
+    const userId = client.data.userId;
+    if (userId) {
+      const userSockets = this.connectedUsers.get(userId);
+      if (userSockets) {
+        userSockets.delete(client.id);
+        if (userSockets.size === 0) {
+          this.connectedUsers.delete(userId);
+        }
+      }
+      this.logger.log(`User ${userId} disconnected from messaging gateway (${client.id})`);
     }
   }
 
@@ -65,5 +96,12 @@ export class MessagesGateway implements OnGatewayConnection {
     const query = client.handshake.query?.token;
     if (query) return query as string;
     return null;
+  }
+
+  /**
+   * Get number of connected users
+   */
+  getConnectedUsersCount(): number {
+    return this.connectedUsers.size;
   }
 }

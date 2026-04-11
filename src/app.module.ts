@@ -12,6 +12,8 @@ import Redis from 'ioredis';
 import { winstonConfig } from './config/winston.config';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { TimeoutMiddleware } from './common/middleware/timeout.middleware';
+import { CommonModule } from './common/common.module';
 
 // Infrastructure
 import { QueuesModule } from './queues/queues.module';
@@ -54,6 +56,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     WinstonModule.forRoot(winstonConfig),
     DatabaseModule,
     RedisModule,
+    CommonModule,
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService, REDIS_CLIENT],
@@ -102,6 +105,8 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestIdMiddleware, TenantMiddleware).forRoutes('*');
+    consumer
+      .apply(RequestIdMiddleware, TimeoutMiddleware, TenantMiddleware)
+      .forRoutes('*');
   }
 }
