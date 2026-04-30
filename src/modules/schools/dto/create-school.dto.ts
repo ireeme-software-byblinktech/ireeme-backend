@@ -15,4 +15,14 @@ export class CreateSchoolDto {
   @IsOptional()
   @IsString()
   region?: string;
+
+  @ApiProperty({ required: false, example: 'K-12 School' })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiProperty({ required: false, example: 'United States' })
+  @IsOptional()
+  @IsString()
+  country?: string;
 }
