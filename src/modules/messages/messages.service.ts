@@ -127,4 +127,8 @@ export class MessagesService {
       },
     };
   }
+
+  async getConversations(schoolId: string, userId: string) {
+    return this.repository.findUserConversations(schoolId, userId);
+  }
 }

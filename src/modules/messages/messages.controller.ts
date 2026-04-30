@@ -29,12 +29,12 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @ApiTags('Messaging')
 @ApiBearerAuth()
-@Controller('communications')
+@Controller('messages')
 @UseGuards(JwtAuthGuard)
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-  @Post('send')
+  @Post()
   @UseInterceptors(FilesInterceptor('attachments'))
   @ApiOperation({ summary: 'Send a new message with optional attachments' })
   @ApiConsumes('multipart/form-data')
@@ -53,6 +53,14 @@ export class MessagesController {
       dto.content,
       files,
     );
+  }
+
+  @Get('conversations')
+  @ApiOperation({ summary: 'Get all user conversations' })
+  @ApiResponse({ status: 200, description: 'List of conversations retrieved' })
+  async getConversations(@Req() req: any) {
+    const { schoolId, sub: userId } = req.user;
+    return this.messagesService.getConversations(schoolId, userId);
   }
 
   @Get('messages/:convId')
