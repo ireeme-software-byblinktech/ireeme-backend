@@ -119,6 +119,8 @@ model School {
   name      String
   code      String   @unique
   region    String?
+  type      String?
+  country   String?
   logoUrl   String?  @map("logo_url")
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")

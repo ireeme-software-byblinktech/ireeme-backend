@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -7,6 +7,8 @@ import Redis from 'ioredis';
 import { AuthRepository } from './auth.repository';
 import { REDIS_CLIENT } from '../../config/redis.module';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RoleType } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +18,60 @@ export class AuthService {
     private readonly config: ConfigService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  async register(dto: RegisterDto) {
+    const existingUser = await this.authRepo.findUserByEmail(dto.email);
+    if (existingUser) throw new ConflictException('Email already in use');
+
+    // Generate unique school code (e.g., BIS for Blink International School + random 4 digits)
+    const baseCode = dto.institutionName
+      .split(' ')
+      .filter((w) => w.length > 0)
+      .map((word) => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 4);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const schoolCode = `${baseCode}${randomSuffix}`;
+
+    const bcryptRounds = this.config.get<number>('BCRYPT_ROUNDS', 12);
+    const passwordHash = await bcrypt.hash(dto.password, bcryptRounds);
+
+    const result = await this.authRepo.prisma.$transaction(async (tx) => {
+      // 1. Create School
+      const school = await tx.school.create({
+        data: {
+          name: dto.institutionName,
+          code: schoolCode,
+          type: dto.type,
+          country: dto.country,
+        },
+      });
+
+      // 2. Create User linked to the new School
+      const user = await tx.user.create({
+        data: {
+          email: dto.email,
+          passwordHash,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          schoolId: school.id,
+          roles: {
+            create: {
+              role: RoleType.SCHOOL_ADMIN,
+              schoolId: school.id,
+            },
+          },
+        },
+      });
+
+      return { user, school };
+    });
+
+    return this.issueTokens(result.user.id, result.user.email, result.school.id, [
+      RoleType.SCHOOL_ADMIN,
+    ]);
+  }
 
   async login(dto: LoginDto) {
     const user = await this.authRepo.findUserByEmail(dto.email);

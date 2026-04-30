@@ -20,13 +20,20 @@ export class SchoolsRepository extends BaseRepository {
     return this.prisma.school.findUnique({ where: { code } });
   }
 
-  create(data: { name: string; code: string; region?: string }) {
+  create(data: { name: string; code: string; region?: string; type?: string; country?: string }) {
     return this.prisma.school.create({ data });
   }
 
   update(
     id: string,
-    data: Partial<{ name: string; region: string; logoUrl: string; isActive: boolean }>,
+    data: Partial<{
+      name: string;
+      region: string;
+      type: string;
+      country: string;
+      logoUrl: string;
+      isActive: boolean;
+    }>,
   ) {
     return this.prisma.school.update({ where: { id }, data });
   }
