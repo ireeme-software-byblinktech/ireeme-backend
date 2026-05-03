@@ -37,7 +37,7 @@ export class AiRepository extends BaseRepository {
   async addMessage(data: {
     schoolId: string;
     conversationId: string;
-    role: string;
+    role: 'user' | 'assistant';
     content: string;
   }) {
     return this.prisma.aiMessage.create({
@@ -45,9 +45,16 @@ export class AiRepository extends BaseRepository {
     });
   }
 
+
   async getUserConversations(userId: string, schoolId: string) {
     return this.prisma.aiConversation.findMany({
-      where: { userId, schoolId },
+      where: this.scopeToSchool(schoolId, { userId }),
+      include: {
+        messages: {
+          orderBy: { sentAt: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

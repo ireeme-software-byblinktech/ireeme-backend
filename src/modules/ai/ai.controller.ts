@@ -5,6 +5,13 @@ import { AiService } from './ai.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
+import { IsString, MinLength } from 'class-validator';
+
+class ChatMessageDto {
+  @IsString()
+  @MinLength(1)
+  content: string;
+}
 
 @ApiTags('ai')
 @ApiBearerAuth()
@@ -15,9 +22,8 @@ export class AiController {
   @Post('chat')
   @Roles(RoleType.STUDENT)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Chat with AI assistant (Student only)' })
-  chat(@CurrentUser() user: JwtPayload, @Body('content') content: string) {
-    return this.service.chat(user.sub, user.schoolId!, content);
+  chat(@CurrentUser() user: JwtPayload, @Body() body: ChatMessageDto) {
+    return this.service.chat(user.sub, user.schoolId!, body.content);
   }
 
   @Get('history')
