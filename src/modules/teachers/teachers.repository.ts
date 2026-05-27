@@ -14,16 +14,28 @@ export class TeachersRepository extends BaseRepository {
     });
   }
 
-  findAll(schoolId: string, page = 1, limit = 25) {
+  async findAll(schoolId: string, page = 1, limit = 25) {
     const where = this.scopeToSchool(schoolId);
-    return this.prisma.teacher.findMany({
-      where,
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
-      },
-    });
+
+    const [data, total] = await Promise.all([
+      this.prisma.teacher.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+        },
+      }),
+      this.prisma.teacher.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    };
   }
 
   findById(id: string, schoolId: string) {
