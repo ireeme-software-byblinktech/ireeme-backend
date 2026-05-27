@@ -9,6 +9,27 @@
 
 School management platform backend. Built with NestJS, PostgreSQL, Redis, Prisma, and BullMQ.
 
+---
+
+## ⚡ Quick Start (Windows)
+
+```powershell
+# 1. Make sure Docker Desktop is running!
+
+# 2. Start all services and backend
+.\start.ps1
+
+# Or manually:
+docker-compose up -d
+npm run start:dev
+```
+
+**Login**: admin@gmail.com / admin@123
+
+**Important**: If you see `RequestTimeoutException`, Docker services are not running. See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for troubleshooting.
+
+---
+
 ## 📚 Documentation
 
 - **[ENTERPRISE_UPGRADE_SUMMARY.md](./ENTERPRISE_UPGRADE_SUMMARY.md)** - Complete list of enterprise improvements
