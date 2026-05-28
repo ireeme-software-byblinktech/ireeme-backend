@@ -16,7 +16,7 @@ export class StudentsService {
     private readonly studentsRepo: StudentsRepository,
     private readonly usersService: UsersService,
     private readonly cacheService: CacheService,
-  ) {}
+  ) { }
 
   findAll(schoolId: string, query: QueryStudentDto) {
     return this.studentsRepo.findAll(schoolId, query);
@@ -24,7 +24,7 @@ export class StudentsService {
 
   async findById(id: string, schoolId: string) {
     const cacheKey = `school:${schoolId}:student:${id}`;
-    
+
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -58,7 +58,7 @@ export class StudentsService {
 
       // Invalidate list cache
       await this.cacheService.delPattern(`school:${schoolId}:student:list*`);
-      
+
       return student;
     } catch (err: any) {
       if (err?.code === 'P2002') {
@@ -69,6 +69,18 @@ export class StudentsService {
   }
 
   async update(id: string, schoolId: string, dto: UpdateStudentDto) {
+    const existingStudent = await this.studentsRepo.findById(id, schoolId);
+    if (!existingStudent) throw new NotFoundException('Student not found');
+
+    // Update user fields if provided
+    if (dto.firstName || dto.lastName) {
+      await this.usersService.update(existingStudent.userId, {
+        ...(dto.firstName && { firstName: dto.firstName }),
+        ...(dto.lastName && { lastName: dto.lastName }),
+      });
+    }
+
+    // Update student fields
     const student = await this.studentsRepo.update(id, schoolId, {
       ...(dto.studentNumber && { studentNumber: dto.studentNumber }),
       ...(dto.dateOfBirth && { dateOfBirth: new Date(dto.dateOfBirth) }),
@@ -82,12 +94,12 @@ export class StudentsService {
       this.cacheService.delPattern(`school:${schoolId}:student:list*`),
     ]);
 
-    return student;
+    return this.studentsRepo.findById(id, schoolId);
   }
 
   async deactivate(id: string, schoolId: string) {
     const student = await this.studentsRepo.update(id, schoolId, { isActive: false });
-    
+
     // Invalidate caches
     await Promise.all([
       this.cacheService.del(`school:${schoolId}:student:${id}`),
@@ -100,7 +112,7 @@ export class StudentsService {
 
   async getDashboard(studentId: string, schoolId: string) {
     const cacheKey = `dashboard:${schoolId}:${studentId}`;
-    
+
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
