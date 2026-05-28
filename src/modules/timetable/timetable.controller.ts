@@ -21,7 +21,7 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth()
 @Controller('timetable')
 export class TimetableController {
-  constructor(private readonly service: TimetableService) {}
+  constructor(private readonly service: TimetableService) { }
 
   @Get('mine')
   @ApiOperation({ summary: 'Get timetable for current student/teacher' })
@@ -34,7 +34,7 @@ export class TimetableController {
   @ApiOperation({ summary: 'Get timetable for a student' })
   byStudent(
     @CurrentUser() user: JwtPayload,
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentId') studentId: string,
   ) {
     return this.service.findByStudent(user.schoolId!, studentId);
   }
@@ -43,7 +43,7 @@ export class TimetableController {
   @ApiOperation({ summary: 'Get timetable for a class' })
   byClass(
     @CurrentUser() user: JwtPayload,
-    @Param('classId', ParseUUIDPipe) classId: string,
+    @Param('classId') classId: string,
   ) {
     return this.service.findByClass(user.schoolId!, classId);
   }
@@ -52,7 +52,7 @@ export class TimetableController {
   @ApiOperation({ summary: 'Get timetable for a teacher' })
   byTeacher(
     @CurrentUser() user: JwtPayload,
-    @Param('teacherId', ParseUUIDPipe) teacherId: string,
+    @Param('teacherId') teacherId: string,
   ) {
     return this.service.findByTeacher(user.schoolId!, teacherId);
   }
@@ -67,7 +67,7 @@ export class TimetableController {
   @Delete(':id')
   @Roles(RoleType.SCHOOL_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+  delete(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.service.delete(user.schoolId!, id);
   }
 }
