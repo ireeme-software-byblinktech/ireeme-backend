@@ -136,6 +136,7 @@ model School {
   assignments        Assignment[]
   grades             Grade[]
   attendanceRecs     AttendanceRecord[]
+  teacherAttendance  TeacherAttendance[]
   healthRecords      HealthRecord[]
   medicalCases       MedicalCase[]
   disciplineCases    DisciplineCase[]
@@ -199,6 +200,7 @@ model User {
   conversations    ConversationMember[]
   aiConversations  AiConversation[]
   attendanceMarked AttendanceRecord[]   @relation("MarkedBy")
+  teacherAttendanceMarked TeacherAttendance[] @relation("TeacherAttendanceMarkedBy")
   healthVisits     HealthRecord[]       @relation("NurseVisits")
   disciplineCases  DisciplineCase[]     @relation("OfficerCases")
   appointments     Appointment[]        @relation("NurseAppointments")
@@ -292,6 +294,7 @@ model Teacher {
   assignments    Assignment[]
   grades         Grade[]
   timetableSlots TimetableSlot[]
+  attendance     TeacherAttendance[]
 
   @@unique([schoolId, employeeNum])
   @@index([schoolId])
@@ -565,6 +568,27 @@ model AttendanceRecord {
   @@index([schoolId, date, status])
   @@index([studentId, date])
   @@map("attendance_records")
+}
+
+model TeacherAttendance {
+  id         String           @id @default(uuid())
+  schoolId   String           @map("school_id")
+  teacherId  String           @map("teacher_id")
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  checkInTime DateTime?       @map("check_in_time")
+  checkOutTime DateTime?      @map("check_out_time")
+  markedById String           @map("marked_by_id")
+  note       String?
+
+  school   School  @relation(fields: [schoolId], references: [id])
+  teacher  Teacher @relation(fields: [teacherId], references: [id])
+  markedBy User    @relation("TeacherAttendanceMarkedBy", fields: [markedById], references: [id])
+
+  @@unique([teacherId, date])
+  @@index([schoolId, date, status])
+  @@index([teacherId, date])
+  @@map("teacher_attendance")
 }
 
 // ─── HEALTH DOMAIN ───────────────────────────────────────────────────────────
