@@ -19,6 +19,7 @@ export const QUEUE_CLEANUP = 'cleanup';
           host: config.get<string>('REDIS_HOST'),
           port: config.get<number>('REDIS_PORT'),
           ...(config.get('REDIS_PASSWORD') ? { password: config.get('REDIS_PASSWORD') } : {}),
+          skipVersionCheck: true,
         },
       }),
     }),

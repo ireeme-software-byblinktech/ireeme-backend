@@ -9,10 +9,35 @@ export class AssignmentsRepository extends BaseRepository {
     super(prisma);
   }
 
-  findAll(schoolId: string, filters: { subjectId?: string; teacherId?: string } = {}) {
+  async findAll(schoolId: string, filters: { subjectId?: string; teacherUserId?: string } = {}) {
+    // If teacherUserId is provided, we need to get the teacher record ID first
+    let where: any = this.scopeToSchool(schoolId, {});
+    
+    if (filters.subjectId) {
+      where.subjectId = filters.subjectId;
+    }
+    
+    if (filters.teacherUserId) {
+      // Get the teacher record by user ID
+      const teacher = await this.prisma.teacher.findFirst({
+        where: { userId: filters.teacherUserId, schoolId },
+        select: { id: true },
+      });
+      
+      if (teacher) {
+        where.teacherId = teacher.id;
+      } else {
+        // If teacher not found, return empty array
+        return [];
+      }
+    }
+    
     return this.prisma.assignment.findMany({
-      where: this.scopeToSchool(schoolId, filters),
-      include: { subject: { select: { name: true } } },
+      where,
+      include: { 
+        subject: { select: { name: true } },
+        submissions: { select: { id: true, studentId: true, status: true, submittedAt: true } }
+      },
       orderBy: { dueAt: 'asc' },
     });
   }
@@ -54,6 +79,10 @@ export class AssignmentsRepository extends BaseRepository {
     }>,
   ) {
     return this.prisma.assignment.update({ where: { id }, data });
+  }
+
+  delete(id: string) {
+    return this.prisma.assignment.delete({ where: { id } });
   }
 
   upsertSubmission(assignmentId: string, studentId: string,schoolId:string, fileUrls: string[], isLate: boolean) {

@@ -24,13 +24,34 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth()
 @Controller('teachers')
 export class TeachersController {
-  constructor(private readonly teachersService: TeachersService) {}
+  constructor(private readonly teachersService: TeachersService) { }
 
   @Get()
   @Roles(RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'List all teachers' })
   findAll(@CurrentUser() user: JwtPayload, @Query('page') page = 1, @Query('limit') limit = 25) {
     return this.teachersService.findAll(user.schoolId!, +page, +limit);
+  }
+
+  @Get('dashboard/stats')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get teacher dashboard statistics' })
+  getDashboardStats(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getDashboardStats(user.sub, user.schoolId!);
+  }
+
+  @Get('performance')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get teacher class performance metrics' })
+  getPerformance(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getPerformance(user.sub, user.schoolId!);
+  }
+
+  @Get('students')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get students in teacher classes' })
+  getStudents(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getStudents(user.sub, user.schoolId!);
   }
 
   @Post()

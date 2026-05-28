@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -28,10 +29,11 @@ export class AssignmentsController {
   constructor(private readonly service: AssignmentsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List assignments (filter by subjectId or teacherId)' })
+  @ApiOperation({ summary: 'List assignments for current teacher' })
   @ApiResponse({ status: 200, description: 'List of assignments retrieved successfully' })
-  findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryAssignmentDto) {
-    return this.service.findAll(user.schoolId!, query.subjectId, query.teacherId);
+  async findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryAssignmentDto) {
+    // Automatically filter by current teacher's assignments
+    return this.service.findAll(user.schoolId!, query.subjectId, user.sub);
   }
 
   @Post()
@@ -61,6 +63,19 @@ export class AssignmentsController {
     @Body() dto: UpdateAssignmentDto,
   ) {
     return this.service.update(id, user.schoolId!, dto);
+  }
+
+  @Delete(':id')
+  @Roles(RoleType.TEACHER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete an assignment (Teachers only)' })
+  @ApiResponse({ status: 204, description: 'Assignment deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
+  delete(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.delete(id, user.schoolId!);
   }
 
   @Post(':id/submit')

@@ -30,6 +30,44 @@ export class TimetableService {
     return [];
   }
 
+  async getTodaySchedule(user: JwtPayload) {
+    const schoolId = user.schoolId!;
+    const today = new Date();
+    // Convert to day of week (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = today.getDay();
+
+    let slots: any[] = [];
+
+    if (user.roles.includes(RoleType.TEACHER)) {
+      const teacher = await this.teachersRepo.findByUserId(user.sub, schoolId);
+      if (teacher) {
+        slots = await this.repo.findByTeacher(schoolId, teacher.id);
+        // Filter for today
+        slots = slots.filter((s: any) => s.dayOfWeek === dayOfWeek);
+      }
+    } else if (user.roles.includes(RoleType.STUDENT)) {
+      const student = await this.studentsRepo.findByUserId(user.sub, schoolId);
+      if (student) {
+        slots = await this.repo.findByStudent(schoolId, student.id);
+        // Filter for today
+        slots = slots.filter((s: any) => s.dayOfWeek === dayOfWeek);
+      }
+    }
+
+    // Transform to match frontend expectations
+    const formattedSlots = slots.map((slot: any) => ({
+      id: slot.id,
+      time: slot.startTime,
+      subject: slot.subject?.name || 'Unknown',
+      class: slot.class?.name || 'Unknown',
+      room: slot.room || 'TBA',
+      studentCount: 0, // Would need to query class size
+      status: 'upcoming' as const,
+    }));
+
+    return { slots: formattedSlots };
+  }
+
   findByClass(schoolId: string, classId: string) {
     return this.repo.findByClass(schoolId, classId);
   }

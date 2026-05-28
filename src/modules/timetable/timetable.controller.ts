@@ -29,6 +29,12 @@ export class TimetableController {
     return this.service.findByUser(user);
   }
 
+  @Get('today')
+  @ApiOperation({ summary: "Get today's schedule for current user" })
+  getTodaySchedule(@CurrentUser() user: JwtPayload) {
+    return this.service.getTodaySchedule(user);
+  }
+
   @Get('student/:studentId')
   @Roles(RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Get timetable for a student' })

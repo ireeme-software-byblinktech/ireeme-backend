@@ -58,11 +58,13 @@ export class CreateAssignmentDto {
   weight: number;
 
   @ApiProperty({
-    description: 'Due date and time (ISO datetime)',
+    description: 'Due date and time (ISO datetime) - optional for drafts',
     example: '2026-04-15T23:59:59.000Z',
+    required: false,
   })
+  @IsOptional()
   @IsDateString()
-  dueAt: string;
+  dueAt?: string;
 
   @ApiProperty({
     description: 'Allow late submissions',

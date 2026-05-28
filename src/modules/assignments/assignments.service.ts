@@ -4,7 +4,7 @@ import { AssignmentsRepository } from './assignments.repository';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
-
+import { TeachersRepository } from '../teachers/teachers.repository';
 import { SubmissionsService } from '../submissions/submissions.service';
 
 @Injectable()
@@ -12,12 +12,13 @@ export class AssignmentsService {
   constructor(
     private readonly repo: AssignmentsRepository,
     private readonly events: EventEmitter2,
+    private readonly teachersRepo: TeachersRepository,
     @Inject(forwardRef(() => SubmissionsService))
     private readonly submissionsService: SubmissionsService,
   ) {}
 
-  findAll(schoolId: string, subjectId?: string, teacherId?: string) {
-    return this.repo.findAll(schoolId, { subjectId, teacherId });
+  findAll(schoolId: string, subjectId?: string, teacherUserId?: string) {
+    return this.repo.findAll(schoolId, { subjectId, teacherUserId });
   }
 
   async findById(id: string, schoolId: string) {
@@ -27,9 +28,22 @@ export class AssignmentsService {
   }
 
   async create(schoolId: string, teacherId: string, dto: CreateAssignmentDto) {
-    const dueAt = new Date(dto.dueAt);
-    if (dueAt <= new Date()) throw new BadRequestException('dueAt must be in the future');
-    const assignment = await this.repo.create({ schoolId, teacherId, ...dto, dueAt });
+    // Validate dueAt if provided
+    if (dto.dueAt) {
+      const dueAt = new Date(dto.dueAt);
+      if (dueAt <= new Date()) throw new BadRequestException('dueAt must be in the future');
+    }
+    
+    // Get the teacher record by user ID
+    const teacher = await this.teachersRepo.findByUserId(teacherId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+    
+    const assignment = await this.repo.create({ 
+      schoolId, 
+      teacherId: teacher.id, 
+      ...dto, 
+      dueAt: dto.dueAt ? new Date(dto.dueAt) : new Date(),
+    });
 
     this.events.emit('assignment.created', {
       assignmentId: assignment.id,
@@ -55,6 +69,11 @@ export class AssignmentsService {
       ...(dto.allowLate !== undefined && { allowLate: dto.allowLate }),
       ...(dto.dueAt && { dueAt: new Date(dto.dueAt) }),
     });
+  }
+
+  async delete(id: string, schoolId: string) {
+    await this.findById(id, schoolId);
+    return this.repo.delete(id);
   }
 
   async submit(

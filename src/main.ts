@@ -28,12 +28,17 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'];
+  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : ['http://localhost:3001', 'http://localhost:3000'];
+  
   app.enableCors({ 
     origin: allowedOrigins, 
     credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
+    preflightContinue: false,
+    optionsSuccessStatus: 200,
   });
 
   // ── Global pipes ──────────────────────────────────────────────────────────
