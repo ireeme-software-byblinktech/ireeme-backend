@@ -14,13 +14,14 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody } from '@nes
 import { memoryStorage } from 'multer';
 import { FilesService } from './files.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('files')
 @ApiBearerAuth()
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(private readonly filesService: FilesService) { }
 
   /**
    * POST /files/upload
@@ -28,6 +29,7 @@ export class FilesController {
    * Returns the S3 key and a 15-min pre-signed URL.
    */
   @Post('upload')
+  @Public()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -44,11 +46,14 @@ export class FilesController {
     },
   })
   async upload(
-    @CurrentUser() user: JwtPayload,
+    @CurrentUser() user: JwtPayload | undefined,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException('No file provided');
-    return this.filesService.upload(file, user.schoolId!, user.sub);
+    // For public uploads (setup), use default values
+    const schoolId: string = user?.schoolId ?? '1';
+    const userId: string = user?.sub ?? '1';
+    return this.filesService.upload(file, schoolId, userId);
   }
 
   /**
