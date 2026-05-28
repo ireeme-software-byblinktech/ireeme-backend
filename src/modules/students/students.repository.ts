@@ -32,15 +32,15 @@ export class StudentsRepository extends BaseRepository {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
-          classes: { select: { class: { select: { name: true } } } },
+          user: { select: { firstName: true, lastName: true, email: true, phoneNumber: true, avatarUrl: true } },
+          classes: { select: { class: { select: { id: true, name: true, year: true, stream: true } } } },
         },
         orderBy: { user: { lastName: 'asc' } },
       }),
       this.prisma.student.count({ where }),
     ]);
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return { data, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
   findById(id: string, schoolId: string) {
