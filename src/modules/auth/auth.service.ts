@@ -17,7 +17,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async register(dto: RegisterDto) {
     const existingUser = await this.authRepo.findUserByEmail(dto.email);
@@ -174,5 +174,12 @@ export class AuthService {
     await this.redis.del(`login:locked:${userId}`);
     await this.redis.del(`login:fails:${userId}`);
     await this.redis.del(`login:fails-1hr:${userId}`);
+  }
+
+  /** Get user by ID */
+  async getUserById(userId: string) {
+    const user = await this.authRepo.findUserById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+    return user;
   }
 }
