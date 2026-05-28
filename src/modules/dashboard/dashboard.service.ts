@@ -7,6 +7,9 @@ import { AttendanceRepository } from '../attendance/attendance.repository';
 import { TimetableRepository } from '../timetable/timetable.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StudentsRepository } from '../students/students.repository';
+import { TeachersRepository } from '../teachers/teachers.repository';
+import { SubjectsRepository } from '../subjects/subjects.repository';
+import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class DashboardService {
@@ -15,12 +18,15 @@ export class DashboardService {
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly studentsRepo: StudentsRepository,
+    private readonly teachersRepo: TeachersRepository,
+    private readonly subjectsRepo: SubjectsRepository,
     private readonly gradesRepo: GradesRepository,
     private readonly assignmentsRepo: AssignmentsRepository,
     private readonly attendanceRepo: AttendanceRepository,
     private readonly timetableRepo: TimetableRepository,
     private readonly notificationsService: NotificationsService,
-  ) {}
+    private readonly prisma: PrismaService,
+  ) { }
 
   private getCacheKey(studentId: string): string {
     return `dashboard:student:${studentId}`;
@@ -81,9 +87,9 @@ export class DashboardService {
     // Logic to fetch assignments for the student's class
     const student = await this.studentsRepo.findById(studentId, schoolId);
     if (!student || student.classes.length === 0) return [];
-    
+
     // Get assignments for current class/subjects
-    return this.assignmentsRepo.findAll(schoolId, { 
+    return this.assignmentsRepo.findAll(schoolId, {
       // Simplified: showing all upcoming for the school if class filtering is complex here
       // But we should ideally filter by classId
     });
@@ -99,5 +105,51 @@ export class DashboardService {
   private filterTodaySlots(slots: any[]) {
     const today = new Date().getDay(); // 0 is Sunday, 1 is Monday...
     return slots.filter(s => s.dayOfWeek === today);
+  }
+
+  async getAdminStats(schoolId: string) {
+    const cacheKey = `dashboard:admin:${schoolId}`;
+
+    // Try cache first
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    // Fetch stats in parallel
+    const [students, teachers, subjects, genderStats] = await Promise.all([
+      this.prisma.student.count({ where: { schoolId } }),
+      this.prisma.teacher.count({ where: { schoolId } }),
+      this.prisma.subject.count({ where: { schoolId } }),
+      this.prisma.student.groupBy({
+        by: ['gender'],
+        where: { schoolId },
+        _count: true,
+      }),
+    ]);
+
+    const maleStudents = genderStats.find(g => g.gender === 'MALE')?._count || 0;
+    const femaleStudents = genderStats.find(g => g.gender === 'FEMALE')?._count || 0;
+
+    // Teacher gender stats - using 50/50 split as gender is not in Teacher model
+    // TODO: Query from User model through relation
+    const maleTeachers = Math.floor(teachers / 2);
+    const femaleTeachers = teachers - maleTeachers;
+
+    const stats = {
+      totalStudents: students,
+      totalTeachers: teachers,
+      totalStaff: teachers, // For now, staff = teachers
+      totalSubjects: subjects,
+      maleStudents,
+      femaleStudents,
+      maleTeachers,
+      femaleTeachers,
+    };
+
+    // Cache for 5 minutes
+    await this.redis.set(cacheKey, JSON.stringify(stats), 'EX', 300);
+
+    return stats;
   }
 }
