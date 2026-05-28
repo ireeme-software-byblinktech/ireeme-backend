@@ -7,7 +7,7 @@ import { ElectionStatus } from '@prisma/client';
 
 @Injectable()
 export class ElectionsService {
-  constructor(private readonly repo: ElectionsRepository) {}
+  constructor(private readonly repo: ElectionsRepository) { }
 
   async createElection(schoolId: string, dto: CreateElectionDto) {
     return this.repo.createElection({
@@ -22,12 +22,12 @@ export class ElectionsService {
   async addCandidate(schoolId: string, dto: AddCandidateDto) {
     const position = await this.repo.findPositionById(dto.positionId, schoolId);
     if (!position) throw new NotFoundException('Election position not found');
-    
+
     // Check if student is already a candidate in this election
     const existing = await this.repo.prisma.candidate.findFirst({
-      where: { 
-        position: { electionId: position.electionId }, 
-        studentId: dto.studentId 
+      where: {
+        position: { electionId: position.electionId },
+        studentId: dto.studentId
       },
     });
     if (existing) throw new ConflictException('Student is already a candidate in this election');
@@ -79,7 +79,7 @@ export class ElectionsService {
     if (!election) throw new NotFoundException('Election not found');
 
     const results = await this.repo.getResults(electionId, schoolId);
-    
+
     // Transform to a clean results format
     return results.map(pos => ({
       positionId: pos.id,
@@ -98,5 +98,44 @@ export class ElectionsService {
 
   findOne(id: string, schoolId: string) {
     return this.repo.findElectionById(id, schoolId);
+  }
+
+  async addPosition(
+    schoolId: string,
+    electionId: string,
+    dto: { name: string; minVotes?: number; maxVotes?: number },
+  ) {
+    const election = await this.repo.findElectionById(electionId, schoolId);
+    if (!election) throw new NotFoundException('Election not found');
+
+    return this.repo.addPosition({
+      schoolId,
+      electionId,
+      name: dto.name,
+      minVotes: dto.minVotes || 1,
+      maxVotes: dto.maxVotes || 1,
+    });
+  }
+
+  async openVoting(electionId: string, schoolId: string) {
+    const election = await this.repo.findElectionById(electionId, schoolId);
+    if (!election) throw new NotFoundException('Election not found');
+
+    if (election.status === ElectionStatus.ACTIVE) {
+      throw new BadRequestException('Election is already active');
+    }
+
+    return this.repo.updateElectionStatus(electionId, schoolId, ElectionStatus.ACTIVE);
+  }
+
+  async closeVoting(electionId: string, schoolId: string) {
+    const election = await this.repo.findElectionById(electionId, schoolId);
+    if (!election) throw new NotFoundException('Election not found');
+
+    if (election.status === ElectionStatus.CLOSED) {
+      throw new BadRequestException('Election is already closed');
+    }
+
+    return this.repo.updateElectionStatus(electionId, schoolId, ElectionStatus.CLOSED);
   }
 }
