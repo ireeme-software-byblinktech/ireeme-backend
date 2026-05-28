@@ -50,4 +50,16 @@ export class UsersRepository extends BaseRepository {
       include: { roles: true },
     });
   }
+
+  update(userId: string, data: {
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    avatarUrl?: string;
+  }) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+  }
 }
