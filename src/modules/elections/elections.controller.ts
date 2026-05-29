@@ -93,4 +93,27 @@ export class ElectionsController {
   closeVoting(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.closeVoting(id, user.schoolId!);
   }
+
+  @Post(':id/publish-results')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Publish election results (Admin only)' })
+  publishResults(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.publishResults(id, user.schoolId!);
+  }
+
+  @Post(':id/unpublish-results')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unpublish election results (Admin only)' })
+  unpublishResults(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.unpublishResults(id, user.schoolId!);
+  }
+
+  @Get(':id/voting-status')
+  @Roles(RoleType.STUDENT)
+  @ApiOperation({ summary: 'Check if current student has voted in this election' })
+  getVotingStatus(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getVotingStatus(id, user.schoolId!, user.sub);
+  }
 }
