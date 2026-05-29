@@ -72,6 +72,23 @@ export class StudentsRepository extends BaseRepository {
   findByUserId(userId: string, schoolId: string) {
     return this.prisma.student.findFirst({
       where: this.scopeToSchool(schoolId, { userId }),
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            avatarUrl: true,
+          },
+        },
+        classes: {
+          include: {
+            class: true,
+          },
+        },
+      },
     });
   }
 

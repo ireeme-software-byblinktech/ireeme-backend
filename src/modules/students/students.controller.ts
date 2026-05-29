@@ -25,13 +25,20 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth()
 @Controller('students')
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(private readonly studentsService: StudentsService) { }
 
   @Get()
   @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER)
   @ApiOperation({ summary: 'Paginated student list (school-scoped)' })
   findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryStudentDto) {
     return this.studentsService.findAll(user.schoolId!, query);
+  }
+
+  @Get('me/profile')
+  @Roles(RoleType.STUDENT)
+  @ApiOperation({ summary: 'Get current student profile' })
+  getMyProfile(@CurrentUser() user: JwtPayload) {
+    return this.studentsService.findByUserId(user.sub, user.schoolId!);
   }
 
   @Post()

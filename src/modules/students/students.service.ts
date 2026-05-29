@@ -36,6 +36,20 @@ export class StudentsService {
     );
   }
 
+  async findByUserId(userId: string, schoolId: string) {
+    const cacheKey = `school:${schoolId}:student:user:${userId}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const student = await this.studentsRepo.findByUserId(userId, schoolId);
+        if (!student) throw new NotFoundException('Student not found');
+        return student;
+      },
+      { ttl: this.STUDENT_TTL },
+    );
+  }
+
   async create(schoolId: string, dto: CreateStudentDto) {
     // Atomic: create user + student profile in one transaction
     const user = await this.usersService.createWithRole({

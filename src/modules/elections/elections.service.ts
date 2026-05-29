@@ -41,17 +41,20 @@ export class ElectionsService {
     });
   }
 
-  async castVote(schoolId: string, studentId: string, dto: CastVoteDto) {
+  async castVote(schoolId: string, userId: string, dto: CastVoteDto) {
     const position = await this.repo.findPositionById(dto.positionId, schoolId);
     if (!position) throw new NotFoundException('Position not found');
 
-    const now = new Date();
+    // Only check if election is ACTIVE, not the dates
     if (position.election.status !== ElectionStatus.ACTIVE) {
-      throw new BadRequestException('Election is not currently active');
+      throw new BadRequestException('Election is not currently open for voting');
     }
-    if (now < position.election.startAt || now > position.election.endAt) {
-      throw new BadRequestException('Election is outside of voting period');
-    }
+
+    // Get the student record from userId
+    const student = await this.repo.prisma.student.findFirst({
+      where: { userId, schoolId },
+    });
+    if (!student) throw new NotFoundException('Student record not found');
 
     // Check if candidate belongs to this position
     const candidate = await this.repo.prisma.candidate.findFirst({
@@ -64,7 +67,7 @@ export class ElectionsService {
         schoolId,
         positionId: dto.positionId,
         candidateId: dto.candidateId,
-        studentId,
+        studentId: student.id,
       });
     } catch (error) {
       if (error.code === 'P2002') {
@@ -80,16 +83,32 @@ export class ElectionsService {
 
     const results = await this.repo.getResults(electionId, schoolId);
 
-    // Transform to a clean results format
-    return results.map(pos => ({
-      positionId: pos.id,
-      positionName: pos.name,
-      candidates: pos.candidates.map(cand => ({
-        candidateId: cand.id,
-        name: `${cand.student.user.firstName} ${cand.student.user.lastName}`,
-        votes: cand._count.votes,
-      })).sort((a, b) => b.votes - a.votes)
-    }));
+    // Calculate total votes for each position
+    const positions = results.map(pos => {
+      const totalVotes = pos.candidates.reduce((sum, cand) => sum + cand._count.votes, 0);
+
+      return {
+        positionId: pos.id,
+        positionTitle: pos.name,
+        totalVotes,
+        candidates: pos.candidates.map(cand => {
+          const voteCount = cand._count.votes;
+          const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+
+          return {
+            candidateId: cand.id,
+            studentName: `${cand.student.user.firstName} ${cand.student.user.lastName}`,
+            voteCount,
+            percentage,
+          };
+        }).sort((a, b) => b.voteCount - a.voteCount), // Sort by vote count descending
+      };
+    });
+
+    return {
+      electionId,
+      positions,
+    };
   }
 
   findAll(schoolId: string) {
@@ -125,7 +144,37 @@ export class ElectionsService {
       throw new BadRequestException('Election is already active');
     }
 
-    return this.repo.updateElectionStatus(electionId, schoolId, ElectionStatus.ACTIVE);
+    // Set startAt to now and endAt to 7 days from now if not already set or if dates are invalid
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const startAt = election.startAt && election.startAt <= now ? election.startAt : now;
+    const endAt = election.endAt && election.endAt > now ? election.endAt : sevenDaysFromNow;
+
+    // Update election with status and valid dates
+    return this.repo.prisma.election.update({
+      where: { id: electionId, schoolId },
+      data: {
+        status: ElectionStatus.ACTIVE,
+        startAt,
+        endAt,
+      },
+      include: {
+        positions: {
+          include: {
+            candidates: {
+              include: {
+                student: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   async closeVoting(electionId: string, schoolId: string) {
@@ -137,5 +186,86 @@ export class ElectionsService {
     }
 
     return this.repo.updateElectionStatus(electionId, schoolId, ElectionStatus.CLOSED);
+  }
+
+  async publishResults(electionId: string, schoolId: string) {
+    const election = await this.repo.findElectionById(electionId, schoolId);
+    if (!election) throw new NotFoundException('Election not found');
+
+    if (election.status !== ElectionStatus.CLOSED) {
+      throw new BadRequestException('Can only publish results for closed elections');
+    }
+
+    return this.repo.prisma.election.update({
+      where: { id: electionId, schoolId },
+      data: { resultsPublished: true },
+      include: {
+        positions: {
+          include: {
+            candidates: {
+              include: {
+                student: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async unpublishResults(electionId: string, schoolId: string) {
+    const election = await this.repo.findElectionById(electionId, schoolId);
+    if (!election) throw new NotFoundException('Election not found');
+
+    return this.repo.prisma.election.update({
+      where: { id: electionId, schoolId },
+      data: { resultsPublished: false },
+      include: {
+        positions: {
+          include: {
+            candidates: {
+              include: {
+                student: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async getVotingStatus(electionId: string, schoolId: string, userId: string) {
+    const election = await this.repo.findElectionById(electionId, schoolId);
+    if (!election) throw new NotFoundException('Election not found');
+
+    // Get the student record from userId
+    const student = await this.repo.prisma.student.findFirst({
+      where: { userId, schoolId },
+    });
+    if (!student) throw new NotFoundException('Student record not found');
+
+    // Check if student has voted in any position of this election
+    const votes = await this.repo.prisma.vote.findMany({
+      where: {
+        studentId: student.id,
+        position: {
+          electionId,
+        },
+      },
+    });
+
+    return {
+      hasVoted: votes.length > 0,
+      votedPositions: votes.length,
+      totalPositions: election.positions.length,
+    };
   }
 }

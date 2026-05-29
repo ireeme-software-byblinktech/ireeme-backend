@@ -876,14 +876,15 @@ model Message {
 // ─── ELECTIONS DOMAIN ────────────────────────────────────────────────────────
 
 model Election {
-  id        String           @id @default(uuid())
-  schoolId  String           @map("school_id")
-  title     String
-  status    ElectionStatus   @default(DRAFT)
-  startAt   DateTime         @map("start_at")
-  endAt     DateTime         @map("end_at")
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
+  id               String           @id @default(uuid())
+  schoolId         String           @map("school_id")
+  title            String
+  status           ElectionStatus   @default(DRAFT)
+  resultsPublished Boolean          @default(false) @map("results_published")
+  startAt          DateTime         @map("start_at")
+  endAt            DateTime         @map("end_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
 
   school    School             @relation(fields: [schoolId], references: [id])
   positions ElectionPosition[]
