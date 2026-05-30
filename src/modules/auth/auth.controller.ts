@@ -25,8 +25,8 @@ import { JwtPayload } from './strategies/jwt.strategy';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
- 
+  constructor(private readonly authService: AuthService) { }
+
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -35,10 +35,12 @@ export class AuthController {
     const { accessToken, refreshToken } = await this.authService.register(dto);
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
     });
-    return { accessToken };
+    return { accessToken, refreshToken };
   }
 
   @Public()
@@ -49,10 +51,12 @@ export class AuthController {
     const { accessToken, refreshToken } = await this.authService.login(dto);
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
     });
-    return { accessToken };
+    return { accessToken, refreshToken };
   }
 
   @Public()
@@ -73,10 +77,12 @@ export class AuthController {
     );
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
     });
-    return { accessToken };
+    return { accessToken, refreshToken };
   }
 
   @Post('logout')
@@ -92,8 +98,19 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user from token' })
-  me(@CurrentUser() user: JwtPayload) {
-    return user;
+  async me(@CurrentUser() user: JwtPayload) {
+    // Fetch full user details from database
+    const fullUser = await this.authService.getUserById(user.sub);
+    return {
+      id: fullUser.id,
+      email: fullUser.email,
+      firstName: fullUser.firstName,
+      lastName: fullUser.lastName,
+      phoneNumber: fullUser.phoneNumber,
+      avatarUrl: fullUser.avatarUrl,
+      roles: user.roles,
+      schoolId: user.schoolId,
+    };
   }
 
   @Post('unlock/:userId')

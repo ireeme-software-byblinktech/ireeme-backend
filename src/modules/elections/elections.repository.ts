@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BaseRepository } from '../../database/base.repository';
 import { ElectionStatus } from '@prisma/client';
@@ -109,6 +109,62 @@ export class ElectionsRepository extends BaseRepository {
     return this.prisma.election.findMany({
       where: { schoolId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        positions: {
+          include: {
+            candidates: {
+              include: { student: { include: { user: true } } },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async addPosition(data: {
+    schoolId: string;
+    electionId: string;
+    name: string;
+    minVotes: number;
+    maxVotes: number;
+  }) {
+    return this.prisma.electionPosition.create({
+      data: {
+        schoolId: data.schoolId,
+        electionId: data.electionId,
+        name: data.name,
+        minVotes: data.minVotes,
+        maxVotes: data.maxVotes,
+      },
+    });
+  }
+
+  async updateElectionStatus(
+    electionId: string,
+    schoolId: string,
+    status: ElectionStatus,
+  ) {
+    // First verify the election belongs to the school
+    const election = await this.prisma.election.findFirst({
+      where: { id: electionId, schoolId },
+    });
+
+    if (!election) {
+      throw new NotFoundException('Election not found');
+    }
+
+    return this.prisma.election.update({
+      where: { id: electionId },
+      data: { status },
+      include: {
+        positions: {
+          include: {
+            candidates: {
+              include: { student: { include: { user: true } } },
+            },
+          },
+        },
+      },
     });
   }
 }

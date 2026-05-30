@@ -4,7 +4,7 @@ import { RoleType } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepo: UsersRepository) {}
+  constructor(private readonly usersRepo: UsersRepository) { }
 
   findById(id: string) {
     return this.usersRepo.findById(id);
@@ -23,5 +23,14 @@ export class UsersService {
     role: RoleType;
   }) {
     return this.usersRepo.createWithRole(data);
+  }
+
+  update(userId: string, data: {
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    avatarUrl?: string;
+  }) {
+    return this.usersRepo.update(userId, data);
   }
 }

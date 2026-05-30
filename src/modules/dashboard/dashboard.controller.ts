@@ -14,7 +14,7 @@ export class DashboardController {
   constructor(
     private readonly dashboardService: DashboardService,
     private readonly studentsRepo: StudentsRepository,
-  ) {}
+  ) { }
 
   @Get('student')
   @Roles(RoleType.STUDENT)
@@ -22,8 +22,15 @@ export class DashboardController {
   async getStudentDashboard(@CurrentUser() user: JwtPayload) {
     const student = await this.studentsRepo.findByUserId(user.sub, user.schoolId!);
     if (!student) {
-        return { message: 'Student profile not found' };
+      return { message: 'Student profile not found' };
     }
     return this.dashboardService.aggregateStudentDashboard(student.id, user.schoolId!);
+  }
+
+  @Get('stats')
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get admin dashboard statistics' })
+  async getAdminStats(@CurrentUser() user: JwtPayload) {
+    return this.dashboardService.getAdminStats(user.schoolId!);
   }
 }
