@@ -39,6 +39,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { NotificationsListener } from './modules/notifications/notifications.listener';
 import { DisciplineModule } from './modules/discipline/discipline.module';
 import { HealthModule } from './modules/health/health.module';
+import { HomePermissionsModule } from './modules/home-permissions/home-permissions.module';
+import { MedicationsModule } from './modules/medications/medications.module';
 import { LibraryModule } from './modules/library/library.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
@@ -90,6 +92,8 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     NotificationsModule,
     DisciplineModule,
     HealthModule,
+    HomePermissionsModule,
+    MedicationsModule,
     LibraryModule,
     ReportsModule,
     HealthCheckModule,
