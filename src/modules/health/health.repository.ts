@@ -21,6 +21,47 @@ export class HealthRepository extends BaseRepository {
   }) {
     return this.prisma.healthRecord.create({
       data: { ...data, visitDate: data.visitDate ?? new Date() },
+      include: { 
+        nurse: { select: { firstName: true, lastName: true } },
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
+    });
+  }
+
+  findAllRecords(schoolId: string, page = 1, limit = 100) {
+    return this.prisma.healthRecord.findMany({
+      where: { schoolId },
+      orderBy: { visitDate: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: { 
+        nurse: { select: { firstName: true, lastName: true } },
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
     });
   }
 
@@ -30,7 +71,22 @@ export class HealthRepository extends BaseRepository {
       orderBy: { visitDate: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
-      include: { nurse: { select: { firstName: true, lastName: true } } },
+      include: { 
+        nurse: { select: { firstName: true, lastName: true } },
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
     });
   }
 
@@ -42,13 +98,45 @@ export class HealthRepository extends BaseRepository {
     diagnosis: string;
     symptoms: string;
   }) {
-    return this.prisma.medicalCase.create({ data });
+    return this.prisma.medicalCase.create({
+      data,
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
+    });
   }
 
   findMedicalCasesByStudent(studentId: string, schoolId: string) {
     return this.prisma.medicalCase.findMany({
       where: this.scopeToSchool(schoolId, { studentId }),
       orderBy: { openedAt: 'desc' },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
     });
   }
 
@@ -69,7 +157,25 @@ export class HealthRepository extends BaseRepository {
     scheduledAt: Date;
     reason: string;
   }) {
-    return this.prisma.appointment.create({ data });
+    return this.prisma.appointment.create({
+      data,
+      include: {
+        nurse: { select: { firstName: true, lastName: true } },
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
+    });
   }
 
   findAppointmentsByStudent(studentId: string, page = 1, limit = 25) {
@@ -78,7 +184,22 @@ export class HealthRepository extends BaseRepository {
       orderBy: { scheduledAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
-      include: { nurse: { select: { firstName: true, lastName: true } } },
+      include: {
+        nurse: { select: { firstName: true, lastName: true } },
+        student: {
+          select: {
+            id: true,
+            studentNumber: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
     });
   }
 

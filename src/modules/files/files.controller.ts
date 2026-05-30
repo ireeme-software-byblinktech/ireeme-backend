@@ -12,9 +12,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
+import { RoleType } from '@prisma/client';
 import { FilesService } from './files.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('files')
 @ApiBearerAuth()
@@ -28,6 +30,7 @@ export class FilesController {
    * Returns the S3 key and a 15-min pre-signed URL.
    */
   @Post('upload')
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER, RoleType.DISCIPLINE_OFFICER, RoleType.NURSE)
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -56,6 +59,7 @@ export class FilesController {
    * Returns a fresh 15-min pre-signed URL for an existing file key.
    */
   @Get(':key/url')
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER, RoleType.DISCIPLINE_OFFICER, RoleType.NURSE)
   @ApiOperation({ summary: 'Get a pre-signed download URL for a file (15 min expiry)' })
   getPresignedUrl(@Param('key') key: string) {
     return this.filesService.getPresignedUrl(key);

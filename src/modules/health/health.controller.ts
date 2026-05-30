@@ -36,6 +36,17 @@ export class HealthController {
     return this.service.createRecord(user.schoolId!, user.sub, dto);
   }
 
+  @Get('records')
+  @Roles(RoleType.NURSE, RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Get all health records for the school' })
+  findAllRecords(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page = 1,
+    @Query('limit') limit = 100,
+  ) {
+    return this.service.findAllRecords(user.schoolId!, +page, +limit);
+  }
+
   @Get('records/student/:studentId')
   @Roles(RoleType.NURSE, RoleType.STUDENT, RoleType.PARENT, RoleType.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Health history — Nurse sees all, Student/Parent sees own only' })

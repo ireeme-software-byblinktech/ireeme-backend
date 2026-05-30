@@ -28,7 +28,7 @@ export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Get()
-  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER)
+  @Roles(RoleType.SCHOOL_ADMIN, RoleType.TEACHER, RoleType.DISCIPLINE_OFFICER, RoleType.NURSE)
   @ApiOperation({ summary: 'Paginated student list (school-scoped)' })
   findAll(@CurrentUser() user: JwtPayload, @Query() query: QueryStudentDto) {
     return this.studentsService.findAll(user.schoolId!, query);

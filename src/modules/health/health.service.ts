@@ -23,6 +23,13 @@ export class HealthService {
   }
 
   /**
+   * Get all health records for the school
+   */
+  findAllRecords(schoolId: string, page?: number, limit?: number) {
+    return this.repo.findAllRecords(schoolId, page, limit);
+  }
+
+  /**
    * Nurse: can view any student's records in their school.
    * Student/Parent: can only view records for the requesting student.
    */
