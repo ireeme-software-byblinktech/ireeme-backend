@@ -1209,41 +1209,18 @@ async function main() {
   const schoolSettings = await prisma.schoolSettings.upsert({
     where: { schoolId: school.id },
     update: {
-      timeSlots: [
-        '08:00',
-        '09:00',
-        '10:00',
-        '11:00',
-        '12:00',
-        '13:00',
-        '14:00',
-        '15:00',
-        '16:00',
-      ],
-      periodDuration: 60,
+      periodDuration: 45,
       breakTime: '10:00',
       lunchTime: '12:00',
     },
     create: {
       schoolId: school.id,
-      timeSlots: [
-        '08:00',
-        '09:00',
-        '10:00',
-        '11:00',
-        '12:00',
-        '13:00',
-        '14:00',
-        '15:00',
-        '16:00',
-      ],
-      periodDuration: 60,
+      periodDuration: 45,
       breakTime: '10:00',
       lunchTime: '12:00',
     },
   });
-  console.log(`✅ School Settings: Time slots configured`);
-  console.log(`   Time Slots: ${schoolSettings.timeSlots.join(', ')}`);
+  console.log(`✅ School Settings: Configured`);
   console.log(`   Period Duration: ${schoolSettings.periodDuration} minutes`);
   console.log(`   Break Time: ${schoolSettings.breakTime}`);
   console.log(`   Lunch Time: ${schoolSettings.lunchTime}`);

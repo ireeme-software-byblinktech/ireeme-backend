@@ -182,4 +182,15 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('User not found');
     return user;
   }
+
+  /** Change user password */
+  async changePassword(userId: string, newPassword: string): Promise<void> {
+    const bcryptRounds = this.config.get<number>('BCRYPT_ROUNDS', 12);
+    const passwordHash = await bcrypt.hash(newPassword, bcryptRounds);
+
+    await this.authRepo.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
 }
