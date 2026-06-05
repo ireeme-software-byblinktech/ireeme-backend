@@ -12,12 +12,22 @@ async function main() {
 
   // 1. Get Hope Haven School from database
   console.log('📚 Fetching Hope Haven School...');
-  const school = await prisma.school.findFirst({
+  let school = await prisma.school.findFirst({
     where: { name: 'Hope haven school' },
   });
 
   if (!school) {
-    throw new Error('❌ Hope Haven School not found in database. Please create it first.');
+    console.log('📚 Creating Hope Haven School...');
+    school = await prisma.school.create({
+      data: {
+        name: 'Hope haven school',
+        code: 'HHS-001',
+        region: 'Kigali',
+        country: 'Rwanda',
+        type: 'SECONDARY',
+        isActive: true,
+      },
+    });
   }
   console.log(`✅ School: ${school.name} (${school.id})`);
 
@@ -136,7 +146,7 @@ async function main() {
   console.log(`✅ Created ${subjects.length} subjects`);
 
   // 5. Create Teacher
-  console.log('👨‍🏫 Creating Teacher...');
+  console.log('👨‍🏫 Creating Teachers...');
   const teacherUser = await prisma.user.upsert({
     where: { email: 'ms.johnson@hopehaven.com' },
     update: {},
@@ -170,7 +180,160 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`✅ Teacher: ${teacherUser.firstName} ${teacherUser.lastName}`);
+  console.log(`✅ Primary Teacher: ${teacherUser.firstName} ${teacherUser.lastName}`);
+
+  // Create additional teachers
+  const additionalTeachers = await Promise.all([
+    (async () => {
+      const user = await prisma.user.upsert({
+        where: { email: 'mr.smith@hopehaven.com' },
+        update: {},
+        create: {
+          email: 'mr.smith@hopehaven.com',
+          passwordHash: hashedPassword,
+          firstName: 'Mr.',
+          lastName: 'Smith',
+          phoneNumber: '+250788123457',
+          schoolId: school.id,
+          isActive: true,
+          roles: {
+            create: {
+              role: RoleType.TEACHER,
+              schoolId: school.id,
+            },
+          },
+        },
+      });
+      const t = await prisma.teacher.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          schoolId: school.id,
+          employeeNum: 'TCH-HHS-002',
+          department: 'Languages',
+          qualification: 'BA English, MEd',
+          joiningDate: new Date('2021-09-01'),
+          isActive: true,
+        },
+      });
+      return { user, teacher: t };
+    })(),
+    (async () => {
+      const user = await prisma.user.upsert({
+        where: { email: 'dr.garcia@hopehaven.com' },
+        update: {},
+        create: {
+          email: 'dr.garcia@hopehaven.com',
+          passwordHash: hashedPassword,
+          firstName: 'Dr.',
+          lastName: 'Garcia',
+          phoneNumber: '+250788123458',
+          schoolId: school.id,
+          isActive: true,
+          roles: {
+            create: {
+              role: RoleType.TEACHER,
+              schoolId: school.id,
+            },
+          },
+        },
+      });
+      const t = await prisma.teacher.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          schoolId: school.id,
+          employeeNum: 'TCH-HHS-003',
+          department: 'Science',
+          qualification: 'PhD Physics',
+          joiningDate: new Date('2020-09-01'),
+          isActive: true,
+        },
+      });
+      return { user, teacher: t };
+    })(),
+    (async () => {
+      const user = await prisma.user.upsert({
+        where: { email: 'mrs.taylor@hopehaven.com' },
+        update: {},
+        create: {
+          email: 'mrs.taylor@hopehaven.com',
+          passwordHash: hashedPassword,
+          firstName: 'Mrs.',
+          lastName: 'Taylor',
+          phoneNumber: '+250788123459',
+          schoolId: school.id,
+          isActive: true,
+          roles: {
+            create: {
+              role: RoleType.TEACHER,
+              schoolId: school.id,
+            },
+          },
+        },
+      });
+      const t = await prisma.teacher.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          schoolId: school.id,
+          employeeNum: 'TCH-HHS-004',
+          department: 'Arts',
+          qualification: 'BA History, MEd',
+          joiningDate: new Date('2023-09-01'),
+          isActive: true,
+        },
+      });
+      return { user, teacher: t };
+    })(),
+  ]);
+  console.log(`✅ Created ${additionalTeachers.length} additional teachers`);
+
+  // Create school admins
+  const schoolAdminUser = await prisma.user.upsert({
+    where: { email: 'admin.principal@hopehaven.com' },
+    update: {},
+    create: {
+      email: 'admin.principal@hopehaven.com',
+      passwordHash: hashedPassword,
+      firstName: 'Principal',
+      lastName: 'Alexander',
+      phoneNumber: '+250788123460',
+      schoolId: school.id,
+      isActive: true,
+      roles: {
+        create: {
+          role: RoleType.SCHOOL_ADMIN,
+          schoolId: school.id,
+        },
+      },
+    },
+  });
+  console.log(`✅ School Admin: ${schoolAdminUser.firstName} ${schoolAdminUser.lastName}`);
+
+  const adminUser2 = await prisma.user.upsert({
+    where: { email: 'admin.registrar@hopehaven.com' },
+    update: {},
+    create: {
+      email: 'admin.registrar@hopehaven.com',
+      passwordHash: hashedPassword,
+      firstName: 'Registrar',
+      lastName: 'Brown',
+      phoneNumber: '+250788123461',
+      schoolId: school.id,
+      isActive: true,
+      roles: {
+        create: {
+          role: RoleType.SCHOOL_ADMIN,
+          schoolId: school.id,
+        },
+      },
+    },
+  });
+  console.log(`✅ School Admin: ${adminUser2.firstName} ${adminUser2.lastName}`);
 
   // 6. Assign Teacher to Subjects
   console.log('📚 Assigning Teacher to Subjects...');
@@ -271,6 +434,7 @@ async function main() {
       data: {
         schoolId: school.id,
         subjectId: subjects[0].id, // Mathematics
+        classId: classes[0].id, // Grade 10-A
         teacherId: teacher.id,
         title: 'Homework #4 - Algebraic Equations',
         description: 'Solve the following algebraic equations and show your work.',
@@ -286,6 +450,7 @@ async function main() {
       data: {
         schoolId: school.id,
         subjectId: subjects[0].id, // Mathematics
+        classId: classes[0].id, // Grade 10-A
         teacherId: teacher.id,
         title: 'Quiz 5 - Geometry Basics',
         description: 'Test your knowledge on basic geometry concepts.',
@@ -301,6 +466,7 @@ async function main() {
       data: {
         schoolId: school.id,
         subjectId: subjects[2].id, // Physics
+        classId: classes[0].id, // Grade 10-A
         teacherId: teacher.id,
         title: 'Midterm Project - Physics in Real Life',
         description: 'Create a project demonstrating physics concepts in everyday life.',
@@ -366,12 +532,21 @@ async function main() {
   const attendanceRecords = await Promise.all(
     students.slice(0, 5).map(async (student, idx) => {
       const statuses = [AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.LATE, AttendanceStatus.EXCUSED];
-      return prisma.attendanceRecord.create({
-        data: {
+      const recordDate = new Date(today.getTime() - idx * 24 * 60 * 60 * 1000);
+      return prisma.attendanceRecord.upsert({
+        where: {
+          studentId_subjectId_date: {
+            studentId: student.id,
+            subjectId: subjects[0].id,
+            date: recordDate,
+          },
+        },
+        update: {},
+        create: {
           schoolId: school.id,
           studentId: student.id,
           subjectId: subjects[0].id, // Mathematics
-          date: new Date(today.getTime() - idx * 24 * 60 * 60 * 1000),
+          date: recordDate,
           status: statuses[idx % statuses.length],
           markedById: teacherUser.id,
           note: idx % 2 === 0 ? 'On time' : 'Late arrival',
@@ -381,44 +556,281 @@ async function main() {
   );
   console.log(`✅ Created ${attendanceRecords.length} attendance records`);
 
-  // 12. Create Timetable Slots
+  // 12. Create Timetable Slots - Comprehensive weekly schedule
   console.log('⏰ Creating Timetable Slots...');
   const timetableSlots = await Promise.all([
-    prisma.timetableSlot.create({
-      data: {
+    // Primary Teacher - Grade 10-A (Monday-Wednesday)
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 1,
+          startTime: '08:00',
+        },
+      },
+      update: {},
+      create: {
         schoolId: school.id,
         classId: classes[0].id, // Grade 10-A
         subjectId: subjects[0].id, // Mathematics
         teacherId: teacher.id,
         dayOfWeek: 1, // Monday
         startTime: '08:00',
-        room: 'Room 101',
+        room: '101',
       },
     }),
-    prisma.timetableSlot.create({
-      data: {
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 1,
+          startTime: '11:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[0].id, // Grade 10-A
+        subjectId: subjects[0].id, // Mathematics
+        teacherId: teacher.id,
+        dayOfWeek: 1, // Monday
+        startTime: '11:00',
+        room: '101',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 2,
+          startTime: '09:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[0].id, // Grade 10-A
+        subjectId: subjects[0].id, // Mathematics
+        teacherId: teacher.id,
+        dayOfWeek: 2, // Tuesday
+        startTime: '09:00',
+        room: '101',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 3,
+          startTime: '13:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[0].id, // Grade 10-A
+        subjectId: subjects[0].id, // Mathematics
+        teacherId: teacher.id,
+        dayOfWeek: 3, // Wednesday
+        startTime: '13:00',
+        room: '101',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 4,
+          startTime: '08:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[0].id, // Grade 10-A
+        subjectId: subjects[0].id, // Mathematics
+        teacherId: teacher.id,
+        dayOfWeek: 4, // Thursday
+        startTime: '08:00',
+        room: '101',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 5,
+          startTime: '14:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[0].id, // Grade 10-A
+        subjectId: subjects[0].id, // Mathematics
+        teacherId: teacher.id,
+        dayOfWeek: 5, // Friday
+        startTime: '14:00',
+        room: '101',
+      },
+    }),
+    // Primary Teacher - Grade 10-B (Physics)
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 1,
+          startTime: '09:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[1].id, // Grade 10-B
+        subjectId: subjects[2].id, // Physics
+        teacherId: teacher.id,
+        dayOfWeek: 1, // Monday
+        startTime: '09:00',
+        room: 'Lab1',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 2,
+          startTime: '11:00',
+        },
+      },
+      update: {},
+      create: {
         schoolId: school.id,
         classId: classes[1].id, // Grade 10-B
         subjectId: subjects[2].id, // Physics
         teacherId: teacher.id,
         dayOfWeek: 2, // Tuesday
-        startTime: '09:00',
-        room: 'Lab 1',
+        startTime: '11:00',
+        room: 'Lab1',
       },
     }),
-    prisma.timetableSlot.create({
-      data: {
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 4,
+          startTime: '14:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[1].id, // Grade 10-B
+        subjectId: subjects[2].id, // Physics
+        teacherId: teacher.id,
+        dayOfWeek: 4, // Thursday
+        startTime: '14:00',
+        room: 'Lab1',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 5,
+          startTime: '09:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[1].id, // Grade 10-B
+        subjectId: subjects[2].id, // Physics
+        teacherId: teacher.id,
+        dayOfWeek: 5, // Friday
+        startTime: '09:00',
+        room: 'Lab1',
+      },
+    }),
+    // Primary Teacher - Grade 11-A (English)
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 2,
+          startTime: '13:00',
+        },
+      },
+      update: {},
+      create: {
         schoolId: school.id,
         classId: classes[2].id, // Grade 11-A
-        subjectId: subjects[0].id, // Mathematics
+        subjectId: subjects[3].id, // English
+        teacherId: teacher.id,
+        dayOfWeek: 2, // Tuesday
+        startTime: '13:00',
+        room: '105',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 3,
+          startTime: '08:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[2].id, // Grade 11-A
+        subjectId: subjects[3].id, // English
         teacherId: teacher.id,
         dayOfWeek: 3, // Wednesday
-        startTime: '10:00',
-        room: 'Room 102',
+        startTime: '08:00',
+        room: '105',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 4,
+          startTime: '11:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[2].id, // Grade 11-A
+        subjectId: subjects[3].id, // English
+        teacherId: teacher.id,
+        dayOfWeek: 4, // Thursday
+        startTime: '11:00',
+        room: '105',
+      },
+    }),
+    prisma.timetableSlot.upsert({
+      where: {
+        teacherId_dayOfWeek_startTime: {
+          teacherId: teacher.id,
+          dayOfWeek: 5,
+          startTime: '13:00',
+        },
+      },
+      update: {},
+      create: {
+        schoolId: school.id,
+        classId: classes[2].id, // Grade 11-A
+        subjectId: subjects[3].id, // English
+        teacherId: teacher.id,
+        dayOfWeek: 5, // Friday
+        startTime: '13:00',
+        room: '105',
       },
     }),
   ]);
   console.log(`✅ Created ${timetableSlots.length} timetable slots`);
+
 
   // 13. Create Grade Appeals
   console.log('🔔 Creating Grade Appeals...');
@@ -438,57 +850,152 @@ async function main() {
   console.log(`✅ Created ${gradeAppeals.length} grade appeals`);
 
   // 14. Create Conversation (Teacher-Parent Communication)
-  console.log('💬 Creating Conversations...');
-  const parentUser = await prisma.user.upsert({
-    where: { email: 'parent.john@hopehaven.com' },
-    update: {},
-    create: {
-      email: 'parent.john@hopehaven.com',
-      passwordHash: hashedPassword,
-      firstName: 'John',
-      lastName: 'Parent',
-      schoolId: school.id,
-      isActive: true,
-      roles: {
+  console.log('💬 Creating Parent Users and Conversations...');
+  
+  // Create multiple parents
+  const parentUsers = await Promise.all([
+    (async () => {
+      const user = await prisma.user.upsert({
+        where: { email: 'parent.john@hopehaven.com' },
+        update: {},
         create: {
-          role: RoleType.PARENT,
+          email: 'parent.john@hopehaven.com',
+          passwordHash: hashedPassword,
+          firstName: 'John',
+          lastName: 'Parent',
           schoolId: school.id,
+          isActive: true,
+          roles: {
+            create: {
+              role: RoleType.PARENT,
+              schoolId: school.id,
+            },
+          },
         },
+      });
+      const p = await prisma.parent.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          schoolId: school.id,
+          phone: '+250788654321',
+          address: '123 Hope Street, Kigali',
+        },
+      });
+      return { user, parent: p };
+    })(),
+    (async () => {
+      const user = await prisma.user.upsert({
+        where: { email: 'parent.sarah@hopehaven.com' },
+        update: {},
+        create: {
+          email: 'parent.sarah@hopehaven.com',
+          passwordHash: hashedPassword,
+          firstName: 'Sarah',
+          lastName: 'Wilson',
+          schoolId: school.id,
+          isActive: true,
+          roles: {
+            create: {
+              role: RoleType.PARENT,
+              schoolId: school.id,
+            },
+          },
+        },
+      });
+      const p = await prisma.parent.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          schoolId: school.id,
+          phone: '+250788654322',
+          address: '456 Education Avenue, Kigali',
+        },
+      });
+      return { user, parent: p };
+    })(),
+    (async () => {
+      const user = await prisma.user.upsert({
+        where: { email: 'parent.michael@hopehaven.com' },
+        update: {},
+        create: {
+          email: 'parent.michael@hopehaven.com',
+          passwordHash: hashedPassword,
+          firstName: 'Michael',
+          lastName: 'Chen',
+          schoolId: school.id,
+          isActive: true,
+          roles: {
+            create: {
+              role: RoleType.PARENT,
+              schoolId: school.id,
+            },
+          },
+        },
+      });
+      const p = await prisma.parent.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          schoolId: school.id,
+          phone: '+250788654323',
+          address: '789 Learning Lane, Kigali',
+        },
+      });
+      return { user, parent: p };
+    })(),
+  ]);
+
+  // Link parents to students
+  await Promise.all([
+    prisma.parentStudent.upsert({
+      where: { id: `ps-${parentUsers[0].parent.id}-${students[0].id}` },
+      update: {},
+      create: {
+        id: `ps-${parentUsers[0].parent.id}-${students[0].id}`,
+        schoolId: school.id,
+        parentId: parentUsers[0].parent.id,
+        studentId: students[0].id,
+        verified: true,
       },
-    },
-  });
+    }),
+    prisma.parentStudent.upsert({
+      where: { id: `ps-${parentUsers[1].parent.id}-${students[1].id}` },
+      update: {},
+      create: {
+        id: `ps-${parentUsers[1].parent.id}-${students[1].id}`,
+        schoolId: school.id,
+        parentId: parentUsers[1].parent.id,
+        studentId: students[1].id,
+        verified: true,
+      },
+    }),
+    prisma.parentStudent.upsert({
+      where: { id: `ps-${parentUsers[2].parent.id}-${students[2].id}` },
+      update: {},
+      create: {
+        id: `ps-${parentUsers[2].parent.id}-${students[2].id}`,
+        schoolId: school.id,
+        parentId: parentUsers[2].parent.id,
+        studentId: students[2].id,
+        verified: true,
+      },
+    }),
+  ]);
 
-  const parent = await prisma.parent.upsert({
-    where: { userId: parentUser.id },
-    update: {},
-    create: {
-      userId: parentUser.id,
-      schoolId: school.id,
-      phone: '+250788654321',
-      address: '123 Hope Street, Kigali',
-    },
-  });
+  console.log(`✅ Created ${parentUsers.length} parent users`);
 
-  // Link parent to student
-  await prisma.parentStudent.upsert({
-    where: { id: `ps-${parent.id}-${students[0].id}` },
-    update: {},
-    create: {
-      id: `ps-${parent.id}-${students[0].id}`,
-      schoolId: school.id,
-      parentId: parent.id,
-      studentId: students[0].id,
-      verified: true,
-    },
-  });
-
+  // Create conversations between teacher and different users
   const conversation = await prisma.conversation.create({
     data: {
       schoolId: school.id,
       members: {
         create: [
           { schoolId: school.id, userId: teacherUser.id },
-          { schoolId: school.id, userId: parentUser.id },
+          { schoolId: school.id, userId: parentUsers[0].user.id },
         ],
       },
     },
@@ -512,7 +1019,7 @@ async function main() {
       data: {
         schoolId: school.id,
         convId: conversation.id,
-        senderId: parentUser.id,
+        senderId: parentUsers[0].user.id,
         content: 'Hi Ms. Johnson! Yes, I\'d love to hear about her progress.',
         isRead: true,
         sentAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
@@ -549,13 +1056,133 @@ async function main() {
   ]);
   console.log(`✅ Created notifications`);
 
+  // 15. Create Notes
+  console.log('\n📝 Creating Notes...');
+  const notes = await Promise.all([
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'Introduction to Quadratic Equations',
+        description: 'Complete notes covering standard form, vertex form, factoring, and graphing of quadratic equations with examples and practice problems.',
+        subject: 'Mathematics',
+        grade: 'Grade 10-A',
+        chapter: 'Chapter 4: Quadratic Equations',
+        type: 'PDF',
+        fileUrl: 'https://example.com/quadratic-equations.pdf',
+        fileSize: '2.4 MB',
+        views: 145,
+        downloads: 89,
+      },
+    }),
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'Cell Structure and Functions',
+        description: 'Detailed notes on prokaryotic and eukaryotic cells, organelles, cell membrane structure, and cellular functions.',
+        subject: 'Biology',
+        grade: 'Grade 11-B',
+        chapter: 'Chapter 2: Cell Biology',
+        type: 'PDF',
+        fileUrl: 'https://example.com/cell-structure.pdf',
+        fileSize: '3.8 MB',
+        views: 198,
+        downloads: 134,
+      },
+    }),
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'Newton\'s Laws of Motion - Video Lecture',
+        description: 'Comprehensive video lecture explaining Newton\'s three laws with real-world applications and demonstrations.',
+        subject: 'Physics',
+        grade: 'Grade 9-A',
+        chapter: 'Chapter 5: Laws of Motion',
+        type: 'VIDEO',
+        fileUrl: 'https://example.com/newtons-laws.mp4',
+        fileSize: '156 MB',
+        views: 267,
+        downloads: 45,
+      },
+    }),
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'Photosynthesis Process Diagram',
+        description: 'High-resolution diagram showing the light and dark reactions of photosynthesis with detailed labels.',
+        subject: 'Biology',
+        grade: 'Grade 10-A',
+        chapter: 'Chapter 6: Photosynthesis',
+        type: 'IMAGE',
+        fileUrl: 'https://example.com/photosynthesis.jpg',
+        fileSize: '1.2 MB',
+        views: 312,
+        downloads: 201,
+      },
+    }),
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'Chemical Bonding Presentation',
+        description: 'PowerPoint presentation covering ionic, covalent, and metallic bonding with interactive examples.',
+        subject: 'Chemistry',
+        grade: 'Grade 11-A',
+        chapter: 'Chapter 3: Chemical Bonding',
+        type: 'PRESENTATION',
+        fileUrl: 'https://example.com/chemical-bonding.pptx',
+        fileSize: '5.6 MB',
+        views: 178,
+        downloads: 92,
+      },
+    }),
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'Trigonometry Formulas and Identities',
+        description: 'Comprehensive list of trigonometric formulas, identities, and their derivations with solved examples.',
+        subject: 'Mathematics',
+        grade: 'Grade 11-B',
+        chapter: 'Chapter 7: Trigonometry',
+        type: 'PDF',
+        fileUrl: 'https://example.com/trigonometry.pdf',
+        fileSize: '1.8 MB',
+        views: 223,
+        downloads: 156,
+      },
+    }),
+    prisma.note.create({
+      data: {
+        schoolId: school.id,
+        createdById: teacherUser.id,
+        title: 'English Literature Study Guide',
+        description: 'Comprehensive study guide for Shakespeare\'s works including character analysis, themes, and important quotes.',
+        subject: 'English',
+        grade: 'Grade 12-A',
+        chapter: 'Chapter 8: Shakespeare',
+        type: 'DOCUMENT',
+        fileUrl: 'https://example.com/shakespeare-guide.docx',
+        fileSize: '2.1 MB',
+        views: 156,
+        downloads: 98,
+      },
+    }),
+  ]);
+  console.log(`✅ Created ${notes.length} notes`);
+
   console.log('\n✨ Hope Haven School seeding completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`   - School: ${school.name}`);
   console.log(`   - Academic Term: ${term.name}`);
   console.log(`   - Classes: ${classes.length}`);
   console.log(`   - Subjects: ${subjects.length}`);
-  console.log(`   - Teacher: ${teacherUser.firstName} ${teacherUser.lastName}`);
+  console.log(`   - Teachers: ${1 + additionalTeachers.length} (1 primary + ${additionalTeachers.length} additional)`);
+  console.log(`   - School Admins: 2`);
+  console.log(`   - Parents: ${parentUsers.length}`);
   console.log(`   - Students: ${students.length}`);
   console.log(`   - Assignments: ${assignments.length}`);
   console.log(`   - Submissions: ${submissions.length}`);
@@ -563,11 +1190,63 @@ async function main() {
   console.log(`   - Attendance Records: ${attendanceRecords.length}`);
   console.log(`   - Timetable Slots: ${timetableSlots.length}`);
   console.log(`   - Grade Appeals: ${gradeAppeals.length}`);
+  console.log(`   - Notes: ${notes.length}`);
   console.log(`   - Conversations: 1`);
   console.log('\n🔐 Test Credentials:');
-  console.log(`   Teacher: ms.johnson@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Primary Teacher: ms.johnson@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Teacher 2: mr.smith@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Teacher 3: dr.garcia@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Teacher 4: mrs.taylor@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   School Admin (Principal): admin.principal@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   School Admin (Registrar): admin.registrar@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Parent 1: parent.john@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Parent 2: parent.sarah@hopehaven.com / ${STANDARD_PASSWORD}`);
+  console.log(`   Parent 3: parent.michael@hopehaven.com / ${STANDARD_PASSWORD}`);
   console.log(`   Student: alice.johnson@hopehaven.com / ${STANDARD_PASSWORD}`);
-  console.log(`   Parent: parent.john@hopehaven.com / ${STANDARD_PASSWORD}`);
+
+  // 20. Create School Settings with time slots
+  console.log('⚙️ Creating School Settings...');
+  const schoolSettings = await prisma.schoolSettings.upsert({
+    where: { schoolId: school.id },
+    update: {
+      timeSlots: [
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+      ],
+      periodDuration: 60,
+      breakTime: '10:00',
+      lunchTime: '12:00',
+    },
+    create: {
+      schoolId: school.id,
+      timeSlots: [
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+      ],
+      periodDuration: 60,
+      breakTime: '10:00',
+      lunchTime: '12:00',
+    },
+  });
+  console.log(`✅ School Settings: Time slots configured`);
+  console.log(`   Time Slots: ${schoolSettings.timeSlots.join(', ')}`);
+  console.log(`   Period Duration: ${schoolSettings.periodDuration} minutes`);
+  console.log(`   Break Time: ${schoolSettings.breakTime}`);
+  console.log(`   Lunch Time: ${schoolSettings.lunchTime}`);
 }
 
 main()

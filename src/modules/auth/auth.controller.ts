@@ -89,6 +89,17 @@ export class AuthController {
     res.clearCookie('refresh_token');
   }
 
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change user password' })
+  async changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: { currentPassword: string; newPassword: string; confirmPassword: string },
+  ) {
+    return this.authService.changePassword(user.sub, dto);
+  }
+
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user from token' })

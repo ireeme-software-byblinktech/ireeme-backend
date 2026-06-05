@@ -8,13 +8,17 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Res,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
+import { Response } from 'express';
 import { FilesService } from './files.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('files')
 @ApiBearerAuth()
@@ -60,4 +64,22 @@ export class FilesController {
   getPresignedUrl(@Param('key') key: string) {
     return this.filesService.getPresignedUrl(key);
   }
+
+  /**
+   * GET /files/view/*
+   * Proxies the file from S3/MinIO with Content-Disposition: inline
+   * This allows PDFs and images to open in the browser instead of downloading
+   * The wildcard captures the full file key including subdirectories
+   */
+  @Get('view/*')
+  @Public() // Allow unauthenticated access for files with valid keys
+  @ApiOperation({ summary: 'View a file inline (PDF/image opens in browser)' })
+  async viewFile(
+    @Param('0') key: string,
+    @Res() res: Response,
+    @Query('inline') inline: string = 'true',
+  ) {
+    return this.filesService.viewFileInline(key, res, inline === 'true');
+  }
 }
+

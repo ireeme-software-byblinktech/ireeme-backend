@@ -131,4 +131,12 @@ export class MessagesService {
   async getConversations(schoolId: string, userId: string) {
     return this.repository.findUserConversations(schoolId, userId);
   }
+
+  async getTeacherContacts(schoolId: string, userId: string) {
+    return this.repository.findTeacherContacts(schoolId, userId);
+  }
+
+  async startConversation(schoolId: string, userId: string, recipientId: string) {
+    return this.repository.createOrGetConversation(schoolId, userId, recipientId);
+  }
 }

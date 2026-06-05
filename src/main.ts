@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { WinstonModule, WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import * as path from 'path';
 import { AppModule } from './app.module';
 import { winstonConfig } from './config/winston.config';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -12,7 +14,7 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import { PrismaService } from './database/prisma.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: WinstonModule.createLogger(winstonConfig),
     bufferLogs: true,
   });
@@ -39,6 +41,11 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
     preflightContinue: false,
     optionsSuccessStatus: 200,
+  });
+
+  // ── Serve static files (uploads) ──────────────────────────────────────────
+  app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
   });
 
   // ── Global pipes ──────────────────────────────────────────────────────────

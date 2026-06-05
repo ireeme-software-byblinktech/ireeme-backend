@@ -76,6 +76,10 @@ export class GradesController {
     @Query('page') page = 1,
     @Query('limit') limit = 50,
   ) {
+    // If teacher, filter by their students; if admin, show all
+    if (user.roles.includes(RoleType.TEACHER)) {
+      return this.appealsService.findAllByTeacher(user.schoolId!, user.sub, +page, +limit);
+    }
     return this.appealsService.findAll(user.schoolId!, +page, +limit);
   }
 }

@@ -45,4 +45,11 @@ export class AuthRepository extends BaseRepository {
       data: { lastLoginAt: new Date() },
     });
   }
+
+  updatePassword(userId: string, passwordHash: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
 }

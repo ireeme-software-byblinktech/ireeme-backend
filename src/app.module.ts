@@ -40,6 +40,7 @@ import { NotificationsListener } from './modules/notifications/notifications.lis
 import { DisciplineModule } from './modules/discipline/discipline.module';
 import { HealthModule } from './modules/health/health.module';
 import { LibraryModule } from './modules/library/library.module';
+import { NotesModule } from './modules/notes/notes.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { FinanceModule } from './modules/finance/finance.module';
@@ -49,6 +50,7 @@ import { ElectionsModule } from './modules/elections/elections.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { SchoolSettingsModule } from './modules/school-settings/school-settings.module';
 
 @Module({
   imports: [
@@ -91,6 +93,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     DisciplineModule,
     HealthModule,
     LibraryModule,
+    NotesModule,
     ReportsModule,
     HealthCheckModule,
     FinanceModule,
@@ -100,6 +103,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     PermissionsModule,
     AiModule,
     SuperAdminModule,
+    SchoolSettingsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, NotificationsListener],
 })

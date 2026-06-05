@@ -63,6 +63,22 @@ export class MessagesController {
     return this.messagesService.getConversations(schoolId, userId);
   }
 
+  @Get('contacts/teacher')
+  @ApiOperation({ summary: 'Get available contacts for teacher (excludes students)' })
+  @ApiResponse({ status: 200, description: 'List of contacts retrieved' })
+  async getTeacherContacts(@Req() req: any) {
+    const { schoolId, sub: userId } = req.user;
+    return this.messagesService.getTeacherContacts(schoolId, userId);
+  }
+
+  @Post('conversation/start')
+  @ApiOperation({ summary: 'Start or get existing conversation with a user' })
+  @ApiResponse({ status: 200, description: 'Conversation retrieved or created' })
+  async startConversation(@Req() req: any, @Body() body: { recipientId: string }) {
+    const { schoolId, sub: userId } = req.user;
+    return this.messagesService.startConversation(schoolId, userId, body.recipientId);
+  }
+
   @Get('messages/:convId')
   @ApiOperation({ summary: 'Get paginated messages for a conversation' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -65,6 +66,28 @@ export class AttendanceController {
     @Query('classId', ParseUUIDPipe) classId: string,
   ) {
     return this.service.getDailySummary(user.schoolId!, date, classId);
+  }
+
+  @Get('teacher/daily')
+  @Roles(RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Get attendance records for teacher\'s students on a specific date' })
+  getTeacherDailyAttendance(
+    @CurrentUser() user: JwtPayload,
+    @Query('date') date: string,
+  ) {
+    return this.service.getTeacherDailyAttendance(user.schoolId!, user.sub, date);
+  }
+
+  @Patch(':id')
+  @Roles(RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update attendance record status' })
+  updateAttendanceStatus(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: { status: string },
+  ) {
+    return this.service.updateAttendanceStatus(user.schoolId!, user.sub, id, dto.status);
   }
 }
 

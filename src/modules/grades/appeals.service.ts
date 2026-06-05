@@ -78,4 +78,9 @@ export class AppealsService {
     const maxLimit = Math.min(limit, 50);
     return this.appealsRepo.findAll(schoolId, page, maxLimit);
   }
+
+  async findAllByTeacher(schoolId: string, teacherUserId: string, page = 1, limit = 50) {
+    const maxLimit = Math.min(limit, 50);
+    return this.appealsRepo.findAllByTeacher(schoolId, teacherUserId, page, maxLimit);
+  }
 }

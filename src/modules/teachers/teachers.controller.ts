@@ -26,11 +26,19 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 export class TeachersController {
   constructor(private readonly teachersService: TeachersService) { }
 
-  @Get()
-  @Roles(RoleType.SCHOOL_ADMIN)
-  @ApiOperation({ summary: 'List all teachers' })
-  findAll(@CurrentUser() user: JwtPayload, @Query('page') page = 1, @Query('limit') limit = 25) {
-    return this.teachersService.findAll(user.schoolId!, +page, +limit);
+  // Specific routes first (before @Get/:id)
+  @Get('subjects/taught')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get subjects taught by current teacher' })
+  getTeacherSubjects(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getTeacherSubjects(user.sub, user.schoolId!);
+  }
+
+  @Get('details')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get current teacher details' })
+  getDetails(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getDetails(user.sub, user.schoolId!);
   }
 
   @Get('dashboard/stats')
@@ -54,12 +62,33 @@ export class TeachersController {
     return this.teachersService.getStudents(user.sub, user.schoolId!);
   }
 
-  @Post()
+  @Get('classes/assigned')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get classes assigned to teacher' })
+  getAssignedClasses(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getAssignedClasses(user.sub, user.schoolId!);
+  }
+
+  @Get('timetable')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get teacher timetable upload' })
+  getTimetable(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getTimetable(user.sub, user.schoolId!);
+  }
+
+  @Get('timetable-slots')
+  @Roles(RoleType.TEACHER)
+  @ApiOperation({ summary: 'Get teacher timetable slots for weekly schedule' })
+  getTimetableSlots(@CurrentUser() user: JwtPayload) {
+    return this.teachersService.getTimetableSlots(user.sub, user.schoolId!);
+  }
+
+  // Generic routes after specific routes
+  @Get()
   @Roles(RoleType.SCHOOL_ADMIN)
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create teacher + user account' })
-  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateTeacherDto) {
-    return this.teachersService.create(user.schoolId!, dto);
+  @ApiOperation({ summary: 'List all teachers' })
+  findAll(@CurrentUser() user: JwtPayload, @Query('page') page = 1, @Query('limit') limit = 25) {
+    return this.teachersService.findAll(user.schoolId!, +page, +limit);
   }
 
   @Get(':id')
@@ -69,15 +98,24 @@ export class TeachersController {
     return this.teachersService.findById(id, user.schoolId!);
   }
 
-  @Patch(':id')
+  // POST routes
+  @Post()
   @Roles(RoleType.SCHOOL_ADMIN)
-  @ApiOperation({ summary: 'Update teacher profile' })
-  update(
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create teacher + user account' })
+  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateTeacherDto) {
+    return this.teachersService.create(user.schoolId!, dto);
+  }
+
+  @Post('timetable')
+  @Roles(RoleType.TEACHER)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Upload teacher timetable' })
+  uploadTimetable(
     @CurrentUser() user: JwtPayload,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateTeacherDto,
+    @Body() dto: { fileKey: string; fileName: string; fileType: string }
   ) {
-    return this.teachersService.update(id, user.schoolId!, dto);
+    return this.teachersService.uploadTimetable(user.sub, user.schoolId!, dto);
   }
 
   @Post(':id/subjects/:subjectId')
@@ -89,6 +127,30 @@ export class TeachersController {
     @Param('subjectId', ParseUUIDPipe) subjectId: string,
   ) {
     return this.teachersService.assignSubject(id, user.schoolId!, subjectId);
+  }
+
+  // PATCH routes
+  @Patch(':id')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Update teacher profile' })
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTeacherDto,
+  ) {
+    return this.teachersService.update(id, user.schoolId!, dto);
+  }
+
+  // DELETE routes
+  @Delete('timetable/:id')
+  @Roles(RoleType.TEACHER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete teacher timetable' })
+  deleteTimetable(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    return this.teachersService.deleteTimetable(id, user.sub, user.schoolId!);
   }
 
   @Delete(':id/subjects/:subjectId')

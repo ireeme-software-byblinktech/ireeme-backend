@@ -168,9 +168,28 @@ model School {
   AiConversation     AiConversation[]
   AiMessage          AiMessage[]
   GradeAppeal        GradeAppeal[]
+  notes              Note[]
+  settings           SchoolSettings?
+  timetableUploads   TimetableUpload[]
 
   @@index([code])
   @@map("schools")
+}
+
+model SchoolSettings {
+  id              String   @id @default(uuid())
+  schoolId        String   @unique @map("school_id")
+  timeSlots       String[] @map("time_slots") // JSON array of time slots like ["08:00", "09:00", ...]
+  periodDuration  Int      @default(60) @map("period_duration") // Duration of each period in minutes
+  breakTime       String?  @map("break_time") // Break time like "10:30"
+  lunchTime       String?  @map("lunch_time") // Lunch time like "12:00"
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@map("school_settings")
 }
 
 model User {
@@ -203,6 +222,7 @@ model User {
   disciplineCases  DisciplineCase[]     @relation("OfficerCases")
   appointments     Appointment[]        @relation("NurseAppointments")
   uploadedFiles    UploadedFile[]
+  createdNotes     Note[]               @relation("CreatedNotes")
 
   @@index([schoolId, email])
   @@index([schoolId, isActive])
@@ -286,12 +306,13 @@ model Teacher {
   joiningDate   DateTime @default(now()) @map("joining_date")
   isActive      Boolean  @default(true) @map("is_active")
 
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school         School           @relation(fields: [schoolId], references: [id])
-  subjects       TeacherSubject[]
-  assignments    Assignment[]
-  grades         Grade[]
-  timetableSlots TimetableSlot[]
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school              School            @relation(fields: [schoolId], references: [id])
+  subjects            TeacherSubject[]
+  assignments         Assignment[]
+  grades              Grade[]
+  timetableSlots      TimetableSlot[]
+  timetableUpload     TimetableUpload?
 
   @@unique([schoolId, employeeNum])
   @@index([schoolId])
@@ -378,6 +399,7 @@ model Class {
   classStudents  ClassStudent[]
   subjects       Subject[]
   timetableSlots TimetableSlot[]
+  assignments    Assignment[]
 
   @@index([schoolId])
   @@map("classes")
@@ -454,10 +476,28 @@ model TimetableSlot {
   @@map("timetable_slots")
 }
 
+model TimetableUpload {
+  id        String   @id @default(uuid())
+  teacherId String   @unique @map("teacher_id")
+  schoolId  String   @map("school_id")
+  fileUrl   String   @map("file_url")  // Legacy: signed URL (deprecated, may be expired)
+  fileKey   String?  @map("file_key")  // S3 key - permanent identifier (new field)
+  fileName  String   @map("file_name")
+  fileType  String   @map("file_type") // 'image', 'pdf', 'document'
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  school  School  @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId])
+  @@map("timetable_uploads")
+}
+
 model Assignment {
   id          String         @id @default(uuid())
   schoolId    String         @map("school_id")
   subjectId   String         @map("subject_id")
+  classId     String?        @map("class_id") // Optional to handle existing data without class assignments
   teacherId   String         @map("teacher_id")
   title       String
   description String?
@@ -467,16 +507,37 @@ model Assignment {
   dueAt       DateTime       @map("due_at")
   allowLate   Boolean        @default(false) @map("allow_late")
   fileUrls    String[]       @map("file_urls")
+  externalLink String?       @map("external_link")
   createdAt   DateTime       @default(now()) @map("created_at")
 
   school      School       @relation(fields: [schoolId], references: [id])
   subject     Subject      @relation(fields: [subjectId], references: [id])
+  class       Class?       @relation(fields: [classId], references: [id])
   teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  questions   Question[]
   submissions Submission[]
 
   @@index([schoolId, subjectId, dueAt])
   @@index([schoolId, teacherId])
+  @@index([classId])
   @@map("assignments")
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  assignmentId  String   @map("assignment_id")
+  type          String   // "MULTIPLE_CHOICE" | "OPEN_ENDED"
+  text          String   @db.Text
+  order         Int      // Question order in assignment
+  marks         Decimal  @db.Decimal(5, 2) // Points for this question
+  options       String[] @map("options") // For multiple choice: ["Option A", "Option B", ...]
+  correctAnswer String?  @map("correct_answer") // For multiple choice: index or text
+  rubric        String?  @db.Text // For open-ended: grading rubric/expectations
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@map("questions")
 }
 
 model Submission {
@@ -975,6 +1036,32 @@ model AiMessage {
 }
 
 // ─── FILES DOMAIN ────────────────────────────────────────────────────────────
+
+model Note {
+  id          String   @id @default(uuid())
+  schoolId    String   @map("school_id")
+  createdById String   @map("created_by_id")
+  title       String
+  description String   @db.Text
+  subject     String
+  grade       String
+  chapter     String
+  type        String   // PDF | VIDEO | IMAGE | PRESENTATION
+  fileUrl     String   @default("") @map("file_url")
+  fileSize    String   @default("0 MB") @map("file_size")
+  views       Int      @default(0)
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  school    School @relation(fields: [schoolId], references: [id])
+  createdBy User   @relation("CreatedNotes", fields: [createdById], references: [id])
+
+  @@index([schoolId])
+  @@index([schoolId, subject])
+  @@index([schoolId, grade])
+  @@map("notes")
+}
 
 model UploadedFile {
   id         String  @id @default(uuid())

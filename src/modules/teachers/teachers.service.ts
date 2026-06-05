@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { TeachersRepository } from './teachers.repository';
 import { UsersService } from '../users/users.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { RoleType } from '@prisma/client';
@@ -12,6 +13,7 @@ export class TeachersService {
     private readonly teachersRepo: TeachersRepository,
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
   ) { }
 
   findAll(schoolId: string, page?: number, limit?: number) {
@@ -22,6 +24,55 @@ export class TeachersService {
     const teacher = await this.teachersRepo.findById(id, schoolId);
     if (!teacher) throw new NotFoundException('Teacher not found');
     return teacher;
+  }
+
+  async getDetails(userId: string, schoolId: string) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    return {
+      id: teacher.id,
+      employeeNum: teacher.employeeNum,
+      department: teacher.department,
+      qualification: teacher.qualification,
+      joiningDate: teacher.joiningDate,
+    };
+  }
+
+  async getTeacherSubjects(userId: string, schoolId: string) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    // Get subjects with full teacher data including subjects
+    const teacherWithSubjects = await this.prisma.teacher.findFirst({
+      where: {
+        id: teacher.id,
+        schoolId,
+      },
+      include: {
+        subjects: {
+          include: {
+            subject: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!teacherWithSubjects) throw new NotFoundException('Teacher not found');
+
+    return {
+      subjects: teacherWithSubjects.subjects.map(ts => ({
+        id: ts.subject.id,
+        name: ts.subject.name,
+        code: ts.subject.code,
+      })),
+    };
   }
 
   async create(schoolId: string, dto: CreateTeacherDto) {
@@ -209,6 +260,35 @@ export class TeachersService {
     return { classes: performance };
   }
 
+  async getAssignedClasses(userId: string, schoolId: string) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    // Get all classes taught by this teacher through timetable slots
+    const timetableSlots = await this.prisma.timetableSlot.findMany({
+      where: {
+        schoolId,
+        teacherId: teacher.id,
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      distinct: ['classId'],
+    });
+
+    // Return unique classes
+    const uniqueClasses = Array.from(
+      new Map(timetableSlots.map((slot) => [slot.class.id, slot.class])).values(),
+    );
+
+    return { classes: uniqueClasses };
+  }
+
   async getStudents(userId: string, schoolId: string) {
     const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
     if (!teacher) throw new NotFoundException('Teacher not found');
@@ -363,5 +443,144 @@ export class TeachersService {
     );
 
     return { students: studentDetails };
+  }
+
+  async getTimetable(userId: string, schoolId: string) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    console.log('[BACKEND LOG] getTimetable - userId:', userId, 'teacherId:', teacher.id);
+    
+    const result = await this.prisma.timetableUpload.findFirst({
+      where: { teacherId: teacher.id },
+    });
+    
+    if (!result) {
+      console.log('[BACKEND LOG] getTimetable - no timetable found');
+      return null;
+    }
+
+    // Extract S3 key from the stored fileUrl
+    let fileKey: string | null = null;
+    
+    if (result.fileUrl) {
+      try {
+        // For MinIO local URLs: http://localhost:9000/bucket-name/folder/uuid.ext
+        // For S3 URLs: https://bucket-name.s3.amazonaws.com/folder/uuid.ext
+        const urlObj = new URL(result.fileUrl);
+        const pathParts = urlObj.pathname.split('/').filter(p => p);
+        
+        // Remove bucket name from path (first part for MinIO style, or from host for S3 style)
+        if (pathParts.length > 1) {
+          fileKey = pathParts.slice(1).join('/'); // Everything after bucket name
+        } else if (pathParts.length === 1 && pathParts[0] !== 'blink-campus-files') {
+          fileKey = pathParts[0]; // Just the path if no bucket in URL
+        }
+        
+        console.log('[BACKEND LOG] Extracted fileKey from URL:', fileKey);
+      } catch (error) {
+        console.warn('[BACKEND LOG] Could not extract key from URL:', error);
+      }
+    }
+
+    // Regenerate fresh signed URL if we have a key
+    if (fileKey) {
+      try {
+        const freshSignedUrl = await this.uploadsService.getSignedUrl(fileKey, true); // inline=true for viewing
+        console.log('[BACKEND LOG] Regenerated fresh signed URL for key:', fileKey);
+        
+        return {
+          ...result,
+          fileUrl: freshSignedUrl, // Return fresh signed URL
+        };
+      } catch (error) {
+        console.warn('[BACKEND LOG] Failed to regenerate signed URL, using stored URL:', error);
+        // Fall back to stored URL if regeneration fails
+      }
+    }
+
+    console.log('[BACKEND LOG] getTimetable - result:', result);
+    return result;
+  }
+
+  async uploadTimetable(userId: string, schoolId: string, dto: {
+    fileKey: string;
+    fileName: string;
+    fileType: string;
+  }) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    // Regenerate a fresh signed URL from the key to store temporarily
+    // This will be regenerated on each getTimetable request
+    const freshSignedUrl = await this.uploadsService.getSignedUrl(dto.fileKey, true); // inline=true for viewing
+
+    // Delete existing timetable upload if any
+    await this.prisma.timetableUpload.deleteMany({
+      where: { teacherId: teacher.id },
+    });
+
+    return this.prisma.timetableUpload.create({
+      data: {
+        teacherId: teacher.id,
+        schoolId,
+        fileUrl: freshSignedUrl, // Store initial signed URL (will be regenerated on each fetch)
+        fileName: dto.fileName,
+        fileType: dto.fileType,
+      },
+    });
+  }
+
+  async deleteTimetable(id: string, userId: string, schoolId: string) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    return this.prisma.timetableUpload.deleteMany({
+      where: {
+        id,
+        teacherId: teacher.id,
+      },
+    });
+  }
+
+  async getTimetableSlots(userId: string, schoolId: string) {
+    const teacher = await this.teachersRepo.findByUserId(userId, schoolId);
+    if (!teacher) throw new NotFoundException('Teacher not found');
+
+    // Get timetable slots for this teacher for all days of the week (0-6, Sunday-Saturday)
+    const slots = await this.prisma.timetableSlot.findMany({
+      where: {
+        schoolId,
+        teacherId: teacher.id,
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        subject: {
+          select: {
+            name: true,
+            code: true,
+          },
+        },
+      },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    });
+
+    return {
+      slots: slots.map((slot: any) => ({
+        id: slot.id,
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        className: slot.class.name,
+        classId: slot.class.id,
+        subjectName: slot.subject.name,
+        subjectCode: slot.subject.code,
+        room: slot.room,
+      })),
+    };
   }
 }

@@ -38,7 +38,7 @@ export class AssignmentsRepository extends BaseRepository {
         subject: { select: { name: true } },
         submissions: { select: { id: true, studentId: true, status: true, submittedAt: true } }
       },
-      orderBy: { dueAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -55,6 +55,7 @@ export class AssignmentsRepository extends BaseRepository {
   create(data: {
     schoolId: string;
     subjectId: string;
+    classId?: string; // Optional, but should be provided for new assignments
     teacherId: string;
     title: string;
     description?: string;
@@ -64,6 +65,7 @@ export class AssignmentsRepository extends BaseRepository {
     dueAt: Date;
     allowLate?: boolean;
     fileUrls?: string[];
+    externalLink?: string;
   }) {
     return this.prisma.assignment.create({ data });
   }

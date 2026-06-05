@@ -1,0 +1,2 @@
+-- This migration was previously created but the file was missing
+-- No changes needed as the schema is already up to date

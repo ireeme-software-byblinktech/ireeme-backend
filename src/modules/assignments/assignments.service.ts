@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Decimal } from '@prisma/client/runtime/library';
 import { AssignmentsRepository } from './assignments.repository';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 import { TeachersRepository } from '../teachers/teachers.repository';
 import { SubmissionsService } from '../submissions/submissions.service';
+import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class AssignmentsService {
@@ -13,6 +15,7 @@ export class AssignmentsService {
     private readonly repo: AssignmentsRepository,
     private readonly events: EventEmitter2,
     private readonly teachersRepo: TeachersRepository,
+    private readonly prisma: PrismaService,
     @Inject(forwardRef(() => SubmissionsService))
     private readonly submissionsService: SubmissionsService,
   ) {}
@@ -38,12 +41,45 @@ export class AssignmentsService {
     const teacher = await this.teachersRepo.findByUserId(teacherId, schoolId);
     if (!teacher) throw new NotFoundException('Teacher not found');
     
-    const assignment = await this.repo.create({ 
+    // Create assignment without questions first
+    const assignmentData = { 
       schoolId, 
       teacherId: teacher.id, 
-      ...dto, 
+      subjectId: dto.subjectId,
+      classId: dto.classId,
+      title: dto.title,
+      description: dto.description,
+      type: dto.type,
+      maxScore: dto.maxScore,
+      weight: dto.weight,
       dueAt: dto.dueAt ? new Date(dto.dueAt) : new Date(),
-    });
+      allowLate: dto.allowLate || false,
+      fileUrls: dto.fileUrls || [],
+      externalLink: dto.externalLink,
+    };
+    
+    const assignment = await this.repo.create(assignmentData);
+
+    // Create questions separately if provided
+    if (dto.questions && dto.questions.length > 0) {
+      try {
+        await this.prisma.question.createMany({
+          data: dto.questions.map(q => ({
+            assignmentId: assignment.id,
+            type: q.type,
+            text: q.text,
+            order: q.order,
+            marks: new Decimal(q.marks),
+            options: q.options || [],
+            correctAnswer: q.correctAnswer || null,
+            rubric: q.rubric || null,
+          })),
+        });
+      } catch (err) {
+        console.error('Failed to create questions:', err);
+        throw new BadRequestException('Failed to create questions for assignment');
+      }
+    }
 
     this.events.emit('assignment.created', {
       assignmentId: assignment.id,
@@ -93,3 +129,4 @@ export class AssignmentsService {
     return this.repo.findSubmission(submissionId);
   }
 }
+

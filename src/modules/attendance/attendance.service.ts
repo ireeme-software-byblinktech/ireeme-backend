@@ -51,5 +51,13 @@ export class AttendanceService {
   getDailySummary(schoolId: string, date: string, classId: string) {
     return this.repo.getDailySummary(schoolId, new Date(date), classId);
   }
+
+  async getTeacherDailyAttendance(schoolId: string, userId: string, date: string) {
+    return this.repo.getTeacherDailyAttendance(schoolId, userId, new Date(date));
+  }
+
+  async updateAttendanceStatus(schoolId: string, userId: string, recordId: string, status: string) {
+    return this.repo.updateAttendanceStatus(schoolId, userId, recordId, status);
+  }
 }
 
