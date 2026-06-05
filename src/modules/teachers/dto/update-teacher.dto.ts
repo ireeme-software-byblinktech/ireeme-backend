@@ -1,3 +1,6 @@
 import { PartialType, OmitType } from '@nestjs/swagger';
 import { CreateTeacherDto } from './create-teacher.dto';
-export class UpdateTeacherDto extends PartialType(OmitType(CreateTeacherDto, ['email'] as const)) {}
+
+export class UpdateTeacherDto extends PartialType(
+    OmitType(CreateTeacherDto, ['email', 'employeeNum'] as const)
+) { }

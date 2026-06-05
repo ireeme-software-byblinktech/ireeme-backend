@@ -17,7 +17,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async register(dto: RegisterDto) {
     const existingUser = await this.authRepo.findUserByEmail(dto.email);
@@ -176,29 +176,10 @@ export class AuthService {
     await this.redis.del(`login:fails-1hr:${userId}`);
   }
 
-  async changePassword(
-    userId: string,
-    dto: { currentPassword: string; newPassword: string; confirmPassword: string },
-  ) {
-    if (dto.newPassword !== dto.confirmPassword) {
-      throw new UnauthorizedException('New passwords do not match');
-    }
-
-    if (dto.newPassword.length < 8) {
-      throw new UnauthorizedException('Password must be at least 8 characters long');
-    }
-
+  /** Get user by ID */
+  async getUserById(userId: string) {
     const user = await this.authRepo.findUserById(userId);
     if (!user) throw new UnauthorizedException('User not found');
-
-    const isValidPassword = await bcrypt.compare(dto.currentPassword, user.passwordHash);
-    if (!isValidPassword) {
-      throw new UnauthorizedException('Current password is incorrect');
-    }
-
-    const bcryptRounds = this.config.get<number>('BCRYPT_ROUNDS', 12);
-    const newPasswordHash = await bcrypt.hash(dto.newPassword, bcryptRounds);
-
-    await this.authRepo.updatePassword(userId, newPasswordHash);
+    return user;
   }
 }

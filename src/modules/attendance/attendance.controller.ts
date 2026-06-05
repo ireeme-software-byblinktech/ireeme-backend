@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Body,
   Param,
   Query,
@@ -22,10 +21,10 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth()
 @Controller('attendance')
 export class AttendanceController {
-  constructor(private readonly service: AttendanceService) {}
+  constructor(private readonly service: AttendanceService) { }
 
   @Post('mark-bulk')
-  @Roles(RoleType.TEACHER)
+  @Roles(RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Mark attendance for whole class on a date (upsert)' })
   markBulk(@CurrentUser() user: JwtPayload, @Body() dto: MarkBulkAttendanceDto) {
@@ -59,35 +58,31 @@ export class AttendanceController {
 
   @Get('daily-summary')
   @Roles(RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
-  @ApiOperation({ summary: 'Daily attendance summary for a class' })
+  @ApiOperation({ summary: 'Daily attendance summary for a class or all classes' })
   getDailySummary(
     @CurrentUser() user: JwtPayload,
     @Query('date') date: string,
-    @Query('classId', ParseUUIDPipe) classId: string,
+    @Query('classId') classId?: string,
   ) {
     return this.service.getDailySummary(user.schoolId!, date, classId);
   }
 
-  @Get('teacher/daily')
-  @Roles(RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
-  @ApiOperation({ summary: 'Get attendance records for teacher\'s students on a specific date' })
-  getTeacherDailyAttendance(
+  @Post('mark-teacher-bulk')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Mark teacher attendance for a date (upsert)' })
+  markTeacherBulk(@CurrentUser() user: JwtPayload, @Body() dto: any) {
+    return this.service.markTeacherBulk(user.schoolId!, user.sub, dto);
+  }
+
+  @Get('teacher-daily-summary')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Daily attendance summary for teachers' })
+  getTeacherDailySummary(
     @CurrentUser() user: JwtPayload,
     @Query('date') date: string,
   ) {
-    return this.service.getTeacherDailyAttendance(user.schoolId!, user.sub, date);
-  }
-
-  @Patch(':id')
-  @Roles(RoleType.TEACHER, RoleType.SCHOOL_ADMIN)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update attendance record status' })
-  updateAttendanceStatus(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-    @Body() dto: { status: string },
-  ) {
-    return this.service.updateAttendanceStatus(user.schoolId!, user.sub, id, dto.status);
+    return this.service.getTeacherDailySummary(user.schoolId!, date);
   }
 }
 

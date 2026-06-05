@@ -22,7 +22,7 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth()
 @Controller('elections')
 export class ElectionsController {
-  constructor(private readonly service: ElectionsService) {}
+  constructor(private readonly service: ElectionsService) { }
 
   @Get()
   @ApiOperation({ summary: 'List all elections in the school' })
@@ -64,5 +64,56 @@ export class ElectionsController {
   @ApiOperation({ summary: 'Get current election results' })
   getResults(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.getResults(id, user.schoolId!);
+  }
+
+  @Post(':id/positions')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Add a position to an election (Admin only)' })
+  addPosition(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) electionId: string,
+    @Body() dto: { name: string; minVotes?: number; maxVotes?: number },
+  ) {
+    return this.service.addPosition(user.schoolId!, electionId, dto);
+  }
+
+  @Post(':id/open')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Open voting for an election (Admin only)' })
+  openVoting(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.openVoting(id, user.schoolId!);
+  }
+
+  @Post(':id/close')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Close voting for an election (Admin only)' })
+  closeVoting(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.closeVoting(id, user.schoolId!);
+  }
+
+  @Post(':id/publish-results')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Publish election results (Admin only)' })
+  publishResults(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.publishResults(id, user.schoolId!);
+  }
+
+  @Post(':id/unpublish-results')
+  @Roles(RoleType.SCHOOL_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unpublish election results (Admin only)' })
+  unpublishResults(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.unpublishResults(id, user.schoolId!);
+  }
+
+  @Get(':id/voting-status')
+  @Roles(RoleType.STUDENT)
+  @ApiOperation({ summary: 'Check if current student has voted in this election' })
+  getVotingStatus(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getVotingStatus(id, user.schoolId!, user.sub);
   }
 }
