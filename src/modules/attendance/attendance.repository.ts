@@ -76,6 +76,14 @@ export class AttendanceRepository extends BaseRepository {
   }
 
   async getDailySummary(schoolId: string, date: Date, classId?: string) {
+    // Normalize date to start of day in UTC
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    
+    // End of day in UTC
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
     // If no classId provided, get all students across all classes
     if (!classId) {
       // Get all students in the school
@@ -98,10 +106,13 @@ export class AttendanceRepository extends BaseRepository {
       const studentIds = allStudents.map((s) => s.id);
       const totalStudents = studentIds.length;
 
-      // Get attendance records for the date
+      // Get attendance records for the date range
       const attendanceRecords = await this.prisma.attendanceRecord.findMany({
         where: this.scopeToSchool(schoolId, {
-          date,
+          date: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
           studentId: { in: studentIds },
         }),
         include: {
@@ -190,10 +201,13 @@ export class AttendanceRepository extends BaseRepository {
     const studentIds = classStudents.map((cs) => cs.studentId);
     const totalStudents = studentIds.length;
 
-    // Get attendance records for the date
+    // Get attendance records for the date range
     const attendanceRecords = await this.prisma.attendanceRecord.findMany({
       where: this.scopeToSchool(schoolId, {
-        date,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
         studentId: { in: studentIds },
       }),
       include: {
