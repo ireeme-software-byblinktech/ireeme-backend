@@ -7,6 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
+# Set NODE_ENV to development to install devDependencies
+ENV NODE_ENV=development
+
 # Install dependencies
 RUN npm ci && \
     npm cache clean --force
