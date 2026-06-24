@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install system dependencies for Prisma
+RUN apk add --no-cache openssl1.1-compat libc6-compat
+
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -26,8 +29,8 @@ RUN npm run build
 # Stage 2: Production
 FROM node:20-alpine AS production
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install system dependencies for Prisma and dumb-init
+RUN apk add --no-cache dumb-init openssl1.1-compat libc6-compat
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
