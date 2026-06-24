@@ -41,8 +41,8 @@ COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 
-# Create logs directory with proper permissions
-RUN mkdir -p /app/logs && chown -R nodejs:nodejs /app/logs
+# Create logs and uploads directories with proper permissions
+RUN mkdir -p /app/logs /app/uploads && chown -R nodejs:nodejs /app/logs /app/uploads
 
 # Switch to non-root user
 USER nodejs
