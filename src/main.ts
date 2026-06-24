@@ -29,7 +29,7 @@ async function bootstrap() {
 
   // ── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim().replace(/^[`'"]+|[`'"]+$/g, ''))
     : ['http://localhost:3001', 'http://localhost:3000', 'https://ireeme-front-migrated-production.up.railway.app'];
   
   console.log('[CORS] Allowed origins:', allowedOrigins);
