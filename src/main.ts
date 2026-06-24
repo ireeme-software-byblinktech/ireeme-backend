@@ -31,19 +31,27 @@ async function bootstrap() {
   const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
     ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim().replace(/^[`'"]+|[`'"]+$/g, ''))
     : ['http://localhost:3001', 'http://localhost:3000', 'https://ireeme-front-migrated-production.up.railway.app'];
-  
+
   console.log('[CORS] Allowed origins:', allowedOrigins);
-  
-  app.enableCors({ 
+
+  app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like curl, postman, etc.)
       if (!origin) return callback(null, true);
+      
+      // Check if origin is allowed
       if (allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
         return callback(null, true);
       }
+
+      // For development, allow all origins (comment this out in production!)
+      // if (process.env.NODE_ENV !== 'production') {
+      //   return callback(null, true);
+      // }
+
       console.log('[CORS] Blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
-    }, 
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
