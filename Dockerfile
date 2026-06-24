@@ -1,10 +1,13 @@
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies for Prisma
-RUN apk add --no-cache openssl libc6-compat
+# Install system dependencies for Prisma and build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
@@ -27,14 +30,17 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 2: Production
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
-# Install system dependencies for Prisma and dumb-init
-RUN apk add --no-cache dumb-init openssl libc6-compat
+# Install dumb-init for proper signal handling and system dependencies for Prisma
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends dumb-init openssl ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -ms /bin/bash -u 1001 -g nodejs nodejs
 
 WORKDIR /app
 
