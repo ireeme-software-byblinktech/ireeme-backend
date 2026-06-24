@@ -14,13 +14,18 @@ export class RedisIoAdapter extends IoAdapter {
 
   async connectToRedis(): Promise<void> {
     const config = this.app.get(ConfigService);
-    const redisUrl = config.get<string>('REDIS_URL');
+    let redisUrl = config.get<string>('REDIS_URL');
+    const redisHost = config.get('REDIS_HOST');
+    
+    if (redisHost && redisHost.startsWith('redis://')) {
+      redisUrl = redisHost;
+    }
     
     let pubClient: Redis;
     if (redisUrl) {
       pubClient = new Redis(redisUrl);
     } else {
-      const host = config.get('REDIS_HOST');
+      const host = redisHost;
       const port = config.get<number>('REDIS_PORT');
       const password = config.get<string>('REDIS_PASSWORD');
       pubClient = new Redis({ host, port, ...(password ? { password } : {}) });
