@@ -42,10 +42,7 @@ async function bootstrap() {
   const winstonLogger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   app.useLogger(winstonLogger);
 
-  // ── Security ──────────────────────────────────────────────────────────────
-  app.use(helmet());
-  app.use(cookieParser());
-
+  // ── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
     ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
     : ['http://localhost:3001', 'http://localhost:3000', 'https://ireeme-front-migrated-production.up.railway.app'];
@@ -68,6 +65,10 @@ async function bootstrap() {
     preflightContinue: false,
     optionsSuccessStatus: 200,
   });
+
+  // ── Security ──────────────────────────────────────────────────────────────
+  app.use(helmet());
+  app.use(cookieParser());
 
   // ── Serve static files (uploads) ──────────────────────────────────────────
   app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
