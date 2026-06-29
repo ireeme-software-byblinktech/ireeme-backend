@@ -11,8 +11,17 @@ export class CountriesController {
   @Get()
   async getAllCountries() {
     const response = await firstValueFrom(
-      this.httpService.get('https://restcountries.com/v3.1/all?fields=name,cca2,flag')
+      this.httpService.get('https://api.restcountries.com/countries/v5?limit=300', {
+        headers: {
+          Authorization: 'Bearer rc_live_d7a20641e6874c23a0adc0aaef718064'
+        }
+      })
     );
-    return response.data;
+    // Transform to match frontend's expected format
+    return response.data.data.map((country: any) => ({
+      name: { common: country.names.common, official: country.names.official },
+      cca2: country.codes.alpha_2,
+      flag: country.flag.emoji
+    }));
   }
 }
