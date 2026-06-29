@@ -1,7 +1,7 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom, catchError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('countries')
@@ -44,7 +44,7 @@ export class CountriesController {
             })
           );
 
-          if (response.data?.data) {
+          if (response.data && Array.isArray(response.data.data)) {
             return response.data.data.map((country: any) => ({
               name: { common: country.names.common, official: country.names.official },
               cca2: country.codes.alpha_2,
@@ -61,14 +61,16 @@ export class CountriesController {
         const fallbackResponse = await firstValueFrom(
           this.httpService.get('https://restcountries.com/v3.1/all?fields=name,cca2,flag')
         );
-        return fallbackResponse.data;
+        if (Array.isArray(fallbackResponse.data)) {
+          return fallbackResponse.data;
+        }
       } catch (err) {
         this.logger.warn('Old countries API failed, using hardcoded fallback', err.message);
-        return this.fallbackCountries;
       }
     } catch (error) {
       this.logger.error('Failed to fetch countries, using hardcoded fallback', error.stack);
-      return this.fallbackCountries;
     }
+
+    return this.fallbackCountries;
   }
 }
