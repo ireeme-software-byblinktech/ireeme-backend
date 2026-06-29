@@ -1,15 +1,12 @@
 import { Controller, Get, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
 import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('countries')
 export class CountriesController {
   private readonly logger = new Logger(CountriesController.name);
 
-  // Hardcoded fallback countries in case all APIs fail
-  private readonly fallbackCountries = [
+  // Hardcoded list that always works
+  private readonly countries = [
     { name: { common: 'United States', official: 'United States of America' }, cca2: 'US', flag: '🇺🇸' },
     { name: { common: 'Canada', official: 'Canada' }, cca2: 'CA', flag: '🇨🇦' },
     { name: { common: 'United Kingdom', official: 'United Kingdom of Great Britain and Northern Ireland' }, cca2: 'GB', flag: '🇬🇧' },
@@ -19,58 +16,23 @@ export class CountriesController {
     { name: { common: 'India', official: 'Republic of India' }, cca2: 'IN', flag: '🇮🇳' },
     { name: { common: 'Nigeria', official: 'Federal Republic of Nigeria' }, cca2: 'NG', flag: '🇳🇬' },
     { name: { common: 'Brazil', official: 'Federative Republic of Brazil' }, cca2: 'BR', flag: '🇧🇷' },
-    { name: { common: 'Japan', official: 'Japan' }, cca2: 'JP', flag: '🇯🇵' }
+    { name: { common: 'Japan', official: 'Japan' }, cca2: 'JP', flag: '🇯🇵' },
+    { name: { common: 'Mexico', official: 'United Mexican States' }, cca2: 'MX', flag: '🇲🇽' },
+    { name: { common: 'South Africa', official: 'Republic of South Africa' }, cca2: 'ZA', flag: '🇿🇦' },
+    { name: { common: 'Kenya', official: 'Republic of Kenya' }, cca2: 'KE', flag: '🇰🇪' },
+    { name: { common: 'Egypt', official: 'Arab Republic of Egypt' }, cca2: 'EG', flag: '🇪🇬' },
+    { name: { common: 'China', official: "People's Republic of China" }, cca2: 'CN', flag: '🇨🇳' },
+    { name: { common: 'South Korea', official: 'Republic of Korea' }, cca2: 'KR', flag: '🇰🇷' },
+    { name: { common: 'Indonesia', official: 'Republic of Indonesia' }, cca2: 'ID', flag: '🇮🇩' },
+    { name: { common: 'Pakistan', official: 'Islamic Republic of Pakistan' }, cca2: 'PK', flag: '🇵🇰' },
+    { name: { common: 'Bangladesh', official: 'People\'s Republic of Bangladesh' }, cca2: 'BD', flag: '🇧🇩' },
+    { name: { common: 'Rwanda', official: 'Republic of Rwanda' }, cca2: 'RW', flag: '🇷🇼' }
   ];
-
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService
-  ) {}
 
   @Public()
   @Get()
-  async getAllCountries() {
-    try {
-      // Try new API first if token exists
-      const apiKey = this.configService.get<string>('REST_COUNTRIES_API_KEY');
-      
-      if (apiKey) {
-        try {
-          const response = await firstValueFrom(
-            this.httpService.get('https://api.restcountries.com/countries/v5?limit=300', {
-              headers: {
-                Authorization: `Bearer ${apiKey}`
-              }
-            })
-          );
-
-          if (response.data && Array.isArray(response.data.data)) {
-            return response.data.data.map((country: any) => ({
-              name: { common: country.names.common, official: country.names.official },
-              cca2: country.codes.alpha_2,
-              flag: country.flag.emoji
-            }));
-          }
-        } catch (err) {
-          this.logger.warn('New countries API failed, falling back to old API', err.message);
-        }
-      }
-
-      // Fallback to old API
-      try {
-        const fallbackResponse = await firstValueFrom(
-          this.httpService.get('https://restcountries.com/v3.1/all?fields=name,cca2,flag')
-        );
-        if (Array.isArray(fallbackResponse.data)) {
-          return fallbackResponse.data;
-        }
-      } catch (err) {
-        this.logger.warn('Old countries API failed, using hardcoded fallback', err.message);
-      }
-    } catch (error) {
-      this.logger.error('Failed to fetch countries, using hardcoded fallback', error.stack);
-    }
-
-    return this.fallbackCountries;
+  getAllCountries() {
+    this.logger.log('Returning countries list');
+    return this.countries;
   }
 }
