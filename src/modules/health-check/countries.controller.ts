@@ -1,5 +1,6 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, catchError } from 'rxjs';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -7,45 +8,67 @@ import { Public } from '../../common/decorators/public.decorator';
 export class CountriesController {
   private readonly logger = new Logger(CountriesController.name);
 
-  constructor(private readonly httpService: HttpService) {}
+  // Hardcoded fallback countries in case all APIs fail
+  private readonly fallbackCountries = [
+    { name: { common: 'United States', official: 'United States of America' }, cca2: 'US', flag: '🇺🇸' },
+    { name: { common: 'Canada', official: 'Canada' }, cca2: 'CA', flag: '🇨🇦' },
+    { name: { common: 'United Kingdom', official: 'United Kingdom of Great Britain and Northern Ireland' }, cca2: 'GB', flag: '🇬🇧' },
+    { name: { common: 'Australia', official: 'Commonwealth of Australia' }, cca2: 'AU', flag: '🇦🇺' },
+    { name: { common: 'Germany', official: 'Federal Republic of Germany' }, cca2: 'DE', flag: '🇩🇪' },
+    { name: { common: 'France', official: 'French Republic' }, cca2: 'FR', flag: '🇫🇷' },
+    { name: { common: 'India', official: 'Republic of India' }, cca2: 'IN', flag: '🇮🇳' },
+    { name: { common: 'Nigeria', official: 'Federal Republic of Nigeria' }, cca2: 'NG', flag: '🇳🇬' },
+    { name: { common: 'Brazil', official: 'Federative Republic of Brazil' }, cca2: 'BR', flag: '🇧🇷' },
+    { name: { common: 'Japan', official: 'Japan' }, cca2: 'JP', flag: '🇯🇵' }
+  ];
+
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService
+  ) {}
 
   @Public()
   @Get()
   async getAllCountries() {
     try {
-      // Try new API first
-      const response = await firstValueFrom(
-        this.httpService.get('https://api.restcountries.com/countries/v5?limit=300', {
-          headers: {
-            Authorization: 'Bearer rc_live_d7a20641e6874c23a0adc0aaef718064'
-          }
-        }).pipe(
-          catchError(async (err) => {
-            this.logger.warn('New countries API failed, falling back to old API', err.message);
-            // Fallback to old API
-            const fallbackResponse = await firstValueFrom(
-              this.httpService.get('https://restcountries.com/v3.1/all?fields=name,cca2,flag')
-            );
-            return { data: { data: fallbackResponse.data } };
-          })
-        )
-      );
+      // Try new API first if token exists
+      const apiKey = this.configService.get<string>('REST_COUNTRIES_API_KEY');
+      
+      if (apiKey) {
+        try {
+          const response = await firstValueFrom(
+            this.httpService.get('https://api.restcountries.com/countries/v5?limit=300', {
+              headers: {
+                Authorization: `Bearer ${apiKey}`
+              }
+            })
+          );
 
-      // Handle both new and old API response formats
-      if (response.data?.data) {
-        // New API format
-        return response.data.data.map((country: any) => ({
-          name: { common: country.names.common, official: country.names.official },
-          cca2: country.codes.alpha_2,
-          flag: country.flag.emoji
-        }));
-      } else {
-        // Old API format (fallback)
-        return response.data;
+          if (response.data?.data) {
+            return response.data.data.map((country: any) => ({
+              name: { common: country.names.common, official: country.names.official },
+              cca2: country.codes.alpha_2,
+              flag: country.flag.emoji
+            }));
+          }
+        } catch (err) {
+          this.logger.warn('New countries API failed, falling back to old API', err.message);
+        }
+      }
+
+      // Fallback to old API
+      try {
+        const fallbackResponse = await firstValueFrom(
+          this.httpService.get('https://restcountries.com/v3.1/all?fields=name,cca2,flag')
+        );
+        return fallbackResponse.data;
+      } catch (err) {
+        this.logger.warn('Old countries API failed, using hardcoded fallback', err.message);
+        return this.fallbackCountries;
       }
     } catch (error) {
-      this.logger.error('Failed to fetch countries', error.stack);
-      throw error;
+      this.logger.error('Failed to fetch countries, using hardcoded fallback', error.stack);
+      return this.fallbackCountries;
     }
   }
 }

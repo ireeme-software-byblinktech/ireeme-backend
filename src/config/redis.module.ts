@@ -15,25 +15,37 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
           let redisUrl = config.get<string>('REDIS_URL');
           const redisHost = config.get('REDIS_HOST');
 
+          const redisOptions = {
+            maxRetriesPerRequest: 0,
+            retryStrategy: () => null,
+            lazyConnect: true,
+          };
+
           // If host looks like a URL, use it
           if (redisHost && redisHost.startsWith('redis://')) {
             redisUrl = redisHost;
           }
 
+          let client: Redis | null = null;
           if (redisUrl) {
-            const client = new Redis(redisUrl);
-            client.on('connect', () => console.log('[Redis] Connected successfully!'));
-            client.on('error', (err) => console.error('[Redis] Connection error:', err.message));
-            return client;
+            client = new Redis(redisUrl, redisOptions);
           } else if (redisHost) {
             const password = config.get<string>('REDIS_PASSWORD');
-            const client = new Redis({
+            client = new Redis({
               host: redisHost,
               port: config.get<number>('REDIS_PORT'),
-              ...(password ? { password } : {})
+              ...(password ? { password } : {}),
+              ...redisOptions
             });
+          }
+
+          if (client) {
+            // Test connection
             client.on('connect', () => console.log('[Redis] Connected successfully!'));
-            client.on('error', (err) => console.error('[Redis] Connection error:', err.message));
+            client.on('error', (err) => {
+              console.error('[Redis] Connection error:', err.message);
+              // Don't spam error logs
+            });
             return client;
           }
 

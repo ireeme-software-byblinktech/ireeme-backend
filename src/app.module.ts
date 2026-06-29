@@ -64,14 +64,14 @@ import { SchoolSettingsModule } from './modules/school-settings/school-settings.
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService, REDIS_CLIENT],
-      useFactory: (config: ConfigService, redis: Redis) => ({
+      useFactory: (config: ConfigService, redis: Redis | null) => ({
         throttlers: [
           {
             ttl: config.get<number>('RATE_LIMIT_TTL', 60) * 1000,
             limit: config.get<number>('RATE_LIMIT_MAX', 300),
           },
         ],
-        storage: new ThrottlerStorageRedisService(redis),
+        storage: redis ? new ThrottlerStorageRedisService(redis) : undefined,
       }),
     }),
     QueuesModule,

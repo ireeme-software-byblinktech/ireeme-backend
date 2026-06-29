@@ -23,21 +23,34 @@ export class RedisIoAdapter extends IoAdapter {
       }
 
       let pubClient: Redis;
+      const redisOptions = {
+        maxRetriesPerRequest: 0,
+        retryStrategy: () => null, // Don't retry
+        lazyConnect: true,
+      };
+
       if (redisUrl) {
-        pubClient = new Redis(redisUrl);
+        pubClient = new Redis(redisUrl, redisOptions);
       } else {
         const host = redisHost;
         const port = config.get<number>('REDIS_PORT');
         const password = config.get<string>('REDIS_PASSWORD');
-        pubClient = new Redis({ host, port, ...(password ? { password } : {}) });
+        pubClient = new Redis({ host, port, ...(password ? { password } : {}), ...redisOptions });
       }
 
       const subClient = pubClient.duplicate();
 
-      // Wait for Redis connection
-      await Promise.all([
-        new Promise((resolve) => pubClient.on('connect', resolve)),
-        new Promise((resolve) => subClient.on('connect', resolve))
+      // Wait for Redis connection with timeout
+      const connectionTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout')), 2000)
+      );
+
+      await Promise.race([
+        Promise.all([
+          new Promise((resolve) => pubClient.on('connect', resolve)),
+          new Promise((resolve) => subClient.on('connect', resolve))
+        ]),
+        connectionTimeout
       ]);
 
       this.adapterConstructor = createAdapter(pubClient, subClient);
