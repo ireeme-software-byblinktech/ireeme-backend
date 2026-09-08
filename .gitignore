@@ -8,8 +8,6 @@ logs/
 # pnpm
 pnpm-lock.yaml
 pnpm-workspace.yaml
-temp_auto_push.bat
-temp_interactive_push.bat
 config.bat
 
 branch_structure.json
