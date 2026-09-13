@@ -2,9 +2,9 @@
   "name": "blink-campus-api",
   "version": "1.0.0",
   "scripts": {
-    "build": "npx nest build",
-    "start": "node dist/main",
-    "dev": "nest start --watch",
+    "build": "node init && npx nest build",
+    "start": "node init && node dist/main",
+    "dev": "node init && nest start --watch",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
